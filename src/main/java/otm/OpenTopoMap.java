@@ -1,9 +1,14 @@
 package otm;
 
+import javax.imageio.ImageIO;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.MessageFormat;
@@ -55,9 +60,9 @@ public class OpenTopoMap {
         final double lon = 10.83916667d;
 
         // the width of the matrix -> (size x size) tiles = size * size * 2 files
-        final int size = 4;
+        final int size = 10;
 
-        final int maxTiles = size*size;
+        final int maxTiles = size * size;
         System.out.println("will generate " + (maxTiles) + " tile(s)");
 
         final Tile[][] tiles = new Tile[size][size];
@@ -69,8 +74,8 @@ public class OpenTopoMap {
                 tiles[0][j] = tiles[0][j - 1].getRightNeighbor();
             }
 
-            System.out.println(MessageFormat.format("working on [{0}/{1}]: {2}", (j+1), maxTiles, tiles[0][j].getName()));
-            tiles[0][j].writeOnDisk(outputDir);
+            System.out.println(MessageFormat.format("working on [{0}/{1}]: {2}", (j + 1), maxTiles, tiles[0][j].getName()));
+            tiles[0][j].writeImageOnDisk(outputDir);
         }
 
         // fill the whole matrix
@@ -84,9 +89,43 @@ public class OpenTopoMap {
                     tiles[i][j] = tiles[i][j - 1].getRightNeighbor();
                 }
 
-                System.out.println(MessageFormat.format("working on [{0}/{1}]: {2}", (i*size)+j+1, maxTiles, tiles[i][j].getName()));
-                tiles[i][j].writeOnDisk(outputDir);
+                System.out.println(MessageFormat.format("working on [{0}/{1}]: {2}", (i * size) + j + 1, maxTiles, tiles[i][j].getName()));
+                tiles[i][j].writeImageOnDisk(outputDir);
             }
         }
+
+        // all the images are fetched, now we merge them in one
+        final int combinedSize = size * 256;
+        BufferedImage combined = new BufferedImage(combinedSize, combinedSize, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = combined.createGraphics();
+        try {
+            for (int i = 0; i < size; i++) {
+                for (int j = 0; j < size; j++) {
+                    g.drawImage(tiles[i][j].getBufferedImage(outputDir), j * 256, i * 256, null);
+                }
+            }
+
+            ImageIO.write(combined, "PNG", outputDir.resolve("combined.png").toFile());
+        } catch (IOException e) {
+            // TODO rework the Exception handling
+            System.out.println(MessageFormat.format("error when merging images: {0}", e.toString()));
+        }
+
+        // generate the combined .map
+        StringBuilder builder = new StringBuilder();
+        builder.append("BITMAP_NAME\tcombined.tga").append("\n");
+        builder.append("WIDTH\t").append(combinedSize).append("\n");
+        builder.append("HEIGHT\t").append(combinedSize).append("\n");
+        builder.append("LON_WEST\t").append(tiles[0][0].getWest()).append("\n");
+        builder.append("LON_EAST\t").append(tiles[0][size - 1].getEast()).append("\n");
+        builder.append("LAT_SOUTH\t").append(tiles[0][size - 1].getSouth()).append("\n");
+        builder.append("LAT_NORTH\t").append(tiles[0][0].getNorth());
+        try(FileWriter writer = new FileWriter(outputDir.resolve("combined.map").toFile())){
+            writer.write(builder.toString());
+        } catch (IOException e) {
+            // TODO rework the Exception handling
+            System.out.println(MessageFormat.format("error when creating combined.map: {0}", e.toString()));
+        }
+
     }
 }

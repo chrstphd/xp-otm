@@ -1,5 +1,8 @@
 package otm;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -22,6 +25,8 @@ public class Tile {
     private double south;
     private double west;
     private double east;
+
+    private Path imagePath;
 
     public Tile(Coordinates coordinates, int zoom) {
         this.coordinates = coordinates;
@@ -69,6 +74,7 @@ public class Tile {
 
     /**
      * Compute the URL of a tile based on the tile coordinates
+     *
      * @return
      * @throws MalformedURLException
      */
@@ -78,6 +84,7 @@ public class Tile {
 
     /**
      * This content will describe the tile, used by the X-Trident plugin to load the tiles in the moving map.
+     *
      * @return
      */
     public String getMap() {
@@ -97,6 +104,7 @@ public class Tile {
     /**
      * Create the tile next to the right of the current tile
      * See the tiles like a simple table.
+     *
      * @return
      */
     public Tile getRightNeighbor() {
@@ -109,6 +117,7 @@ public class Tile {
     /**
      * Create the tile just lower of the current tile.
      * See the tiles like a simple table
+     *
      * @return
      */
     public Tile getLowerNeighbor() {
@@ -118,23 +127,20 @@ public class Tile {
         return new Tile(new Coordinates(nextLat, coordinates.getLon()), zoom);
     }
 
-    /**
-     * To persist the content on disk
-     * @param output
-     */
-    public void writeOnDisk(Path output) {
-        writeImageOnDisk(output);
-        writeMapOnDisk(output);
-    }
+    public void writeImageOnDisk(Path output) {
+        imagePath = output.resolve(getName() + ".png");
 
-    private void writeImageOnDisk(Path output) {
-        try {
-            ReadableByteChannel readableByteChannel = Channels.newChannel(getURL().openStream());
-            FileOutputStream fileOutputStream = new FileOutputStream(output.resolve(getName() + ".png").toFile());
-            fileOutputStream.getChannel().transferFrom(readableByteChannel, 0, Long.MAX_VALUE);
-        } catch (IOException e) {
-            // TODO rework the Exception handling
-            System.out.println(MessageFormat.format("Tile {0}: {1}", getName(), e.toString()));
+        if (!imagePath.toFile().exists()) {
+            try {
+                ReadableByteChannel readableByteChannel = Channels.newChannel(getURL().openStream());
+                FileOutputStream fileOutputStream = new FileOutputStream(imagePath.toFile());
+                fileOutputStream.getChannel().transferFrom(readableByteChannel, 0, Long.MAX_VALUE);
+            } catch (IOException e) {
+                // TODO rework the Exception handling
+                System.out.println(MessageFormat.format("Tile {0}: {1}", getName(), e.toString()));
+            }
+        } else {
+            System.out.println("image already fetched, no download");
         }
     }
 
@@ -145,5 +151,25 @@ public class Tile {
             // TODO rework the Exception handling
             System.out.println(MessageFormat.format("Tile {0}: {1}", getName(), e.toString()));
         }
+    }
+
+    public BufferedImage getBufferedImage(Path inputPath) throws IOException {
+        return ImageIO.read(imagePath.toFile());
+    }
+
+    public double getNorth() {
+        return north;
+    }
+
+    public double getSouth() {
+        return south;
+    }
+
+    public double getWest() {
+        return west;
+    }
+
+    public double getEast() {
+        return east;
     }
 }
