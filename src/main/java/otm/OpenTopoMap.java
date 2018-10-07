@@ -66,27 +66,20 @@ public class OpenTopoMap {
         System.out.println("will generate " + (maxTiles) + " tile(s)");
 
         final Tile[][] tiles = new Tile[size][size];
-        // create the first line
-        for (int j = 0; j < size; j++) {
-            if (j == 0) {
-                tiles[0][j] = new Tile(new Coordinates(lat, lon), zoom);
-            } else {
-                tiles[0][j] = tiles[0][j - 1].getRightNeighbor();
-            }
-
-            System.out.println(MessageFormat.format("working on [{0}/{1}]: {2}", (j + 1), maxTiles, tiles[0][j].getName()));
-            tiles[0][j].writeImageOnDisk(outputDir);
-        }
 
         // fill the whole matrix
-        for (int i = 1; i < size; i++) {
+        for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
-                if (j == 0) {
-                    // create a new tile based on the previous row
-                    tiles[i][j] = tiles[i - 1][j].getLowerNeighbor();
+                if(i==0 && j==0){
+                    tiles[0][j] = new Tile(new Coordinates(lat, lon), zoom);
                 } else {
-                    // create a new tile base on the previous tile
-                    tiles[i][j] = tiles[i][j - 1].getRightNeighbor();
+                    if (j == 0) {
+                        // create a new tile based on the previous row
+                        tiles[i][j] = tiles[i - 1][j].getLowerNeighbor();
+                    } else {
+                        // create a new tile base on the previous tile
+                        tiles[i][j] = tiles[i][j - 1].getRightNeighbor();
+                    }
                 }
 
                 System.out.println(MessageFormat.format("working on [{0}/{1}]: {2}", (i * size) + j + 1, maxTiles, tiles[i][j].getName()));
@@ -118,7 +111,7 @@ public class OpenTopoMap {
         builder.append("HEIGHT\t").append(combinedSize).append("\n");
         builder.append("LON_WEST\t").append(tiles[0][0].getWest()).append("\n");
         builder.append("LON_EAST\t").append(tiles[0][size - 1].getEast()).append("\n");
-        builder.append("LAT_SOUTH\t").append(tiles[0][size - 1].getSouth()).append("\n");
+        builder.append("LAT_SOUTH\t").append(tiles[size - 1][0].getSouth()).append("\n");
         builder.append("LAT_NORTH\t").append(tiles[0][0].getNorth());
         try(FileWriter writer = new FileWriter(outputDir.resolve("combined.map").toFile())){
             writer.write(builder.toString());
