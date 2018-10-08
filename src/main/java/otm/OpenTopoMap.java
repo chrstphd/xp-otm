@@ -49,10 +49,12 @@ public class OpenTopoMap {
         allowSecuredHttp();
 
         // where the files need to be stored (.map and .png)
-        final Path outputDir = Paths.get("E:\\XPlane11\\Aircraft\\X-Trident.beta\\AV8B Harrier II.20181006\\plugins\\harrier\\maps");
+        //final Path outputDir = Paths.get("E:\\XPlane11\\Aircraft\\X-Trident.beta\\AV8B Harrier II.20181006\\plugins\\harrier\\maps");
+        final Path outputDir = Paths.get("h:/XPlaneComplements/OTM");
+
 
         // the zoom of the map (11->18)
-        final int zoom = 13;
+        final int zoom = 15;
 
         // the latitude/longitude in degrees
         // see e.g. for the conversion: http://www.onlineconversion.com/map_decimaldegrees.htm
@@ -60,7 +62,7 @@ public class OpenTopoMap {
         final double lon = 10.83916667d;
 
         // the width of the matrix -> (size x size) tiles = size * size * 2 files
-        final int size = 10;
+        final int size = 5;
 
         final int maxTiles = size * size;
         System.out.println("will generate " + (maxTiles) + " tile(s)");
@@ -70,7 +72,7 @@ public class OpenTopoMap {
         // fill the whole matrix
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
-                if(i==0 && j==0){
+                if (i == 0 && j == 0) {
                     tiles[0][j] = new Tile(new Coordinates(lat, lon), zoom);
                 } else {
                     if (j == 0) {
@@ -94,7 +96,7 @@ public class OpenTopoMap {
         try {
             for (int i = 0; i < size; i++) {
                 for (int j = 0; j < size; j++) {
-                    g.drawImage(tiles[i][j].getBufferedImage(outputDir), j * 256, i * 256, null);
+                    g.drawImage(tiles[i][j].getBufferedImage(outputDir.resolve("cache")), j * 256, i * 256, null);
                 }
             }
 
@@ -113,7 +115,7 @@ public class OpenTopoMap {
         builder.append("LON_EAST\t").append(tiles[0][size - 1].getEast()).append("\n");
         builder.append("LAT_SOUTH\t").append(tiles[size - 1][0].getSouth()).append("\n");
         builder.append("LAT_NORTH\t").append(tiles[0][0].getNorth());
-        try(FileWriter writer = new FileWriter(outputDir.resolve("combined.map").toFile())){
+        try (FileWriter writer = new FileWriter(outputDir.resolve("combined.map").toFile())) {
             writer.write(builder.toString());
         } catch (IOException e) {
             // TODO rework the Exception handling

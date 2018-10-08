@@ -69,7 +69,7 @@ public class Tile {
     }
 
     public String getName() {
-        return xtile + "_" + ytile;
+        return zoom + "/" + xtile + "/" + ytile;
     }
 
     /**
@@ -79,7 +79,7 @@ public class Tile {
      * @throws MalformedURLException
      */
     public URL getURL() throws MalformedURLException {
-        return new URL("https://tile.openstreetmap.org/" + zoom + "/" + xtile + "/" + ytile + ".png");
+        return new URL("https://tile.openstreetmap.org/" + getName() + ".png");
     }
 
     /**
@@ -128,10 +128,13 @@ public class Tile {
     }
 
     public void writeImageOnDisk(Path output) {
-        imagePath = output.resolve(getName() + ".png");
+        imagePath = output.resolve("cache/" + getName() + ".png");
 
         if (!imagePath.toFile().exists()) {
             try {
+                // create the folders "zoom/x/"
+                imagePath.getParent().toFile().mkdirs();
+
                 ReadableByteChannel readableByteChannel = Channels.newChannel(getURL().openStream());
                 FileOutputStream fileOutputStream = new FileOutputStream(imagePath.toFile());
                 fileOutputStream.getChannel().transferFrom(readableByteChannel, 0, Long.MAX_VALUE);
