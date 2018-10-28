@@ -1,8 +1,12 @@
-package otm;
+package otm.tile;
+
+import otm.OpenTopoMap;
+import otm.util.Coordinates;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -10,11 +14,12 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.MessageFormat;
 
 public class Tile {
-
     private final Coordinates coordinates;
     private final int zoom;
 
@@ -38,6 +43,8 @@ public class Tile {
         south = tile2lat(ytile + 1, zoom);
         west = tile2lon(xtile, zoom);
         east = tile2lon(xtile + 1, zoom);
+
+        imagePath = OpenTopoMap.OTM_CACHE_DIR.resolve(getName() + ".png");
     }
 
     /**
@@ -73,35 +80,6 @@ public class Tile {
     }
 
     /**
-     * Compute the URL of a tile based on the tile coordinates
-     *
-     * @return
-     * @throws MalformedURLException
-     */
-    public URL getURL() throws MalformedURLException {
-        return new URL("https://tile.openstreetmap.org/" + getName() + ".png");
-    }
-
-    /**
-     * This content will describe the tile, used by the X-Trident plugin to load the tiles in the moving map.
-     *
-     * @return
-     */
-    public String getMap() {
-        StringBuilder builder = new StringBuilder();
-
-        builder.append("BITMAP_NAME\t").append(getName()).append(".tga").append("\n");
-        builder.append("WIDTH\t256").append("\n");
-        builder.append("HEIGHT\t256").append("\n");
-        builder.append("LON_WEST\t").append(west).append("\n");
-        builder.append("LON_EAST\t").append(east).append("\n");
-        builder.append("LAT_SOUTH\t").append(south).append("\n");
-        builder.append("LAT_NORTH\t").append(north);
-
-        return builder.toString();
-    }
-
-    /**
      * Create the tile next to the right of the current tile
      * See the tiles like a simple table.
      *
@@ -127,37 +105,71 @@ public class Tile {
         return new Tile(new Coordinates(nextLat, coordinates.getLon()), zoom);
     }
 
-    public void writeImageOnDisk(Path output) {
-        imagePath = output.resolve("cache/" + getName() + ".png");
+    public void downloadImage() throws TileException {
+        if (!checkIfPreviouslyDownloaded()) {
+            // create the folders "zoom/x/"
+            imagePath.getParent().toFile().mkdirs();
 
-        if (!imagePath.toFile().exists()) {
+            final String urlString = "https://" + ("abc".charAt((int) (Math.random() * 100) % 3)) + ".tile.opentopomap.org/" + getName() + ".png";
+            final URL url;
             try {
-                // create the folders "zoom/x/"
-                imagePath.getParent().toFile().mkdirs();
-
-                ReadableByteChannel readableByteChannel = Channels.newChannel(getURL().openStream());
-                FileOutputStream fileOutputStream = new FileOutputStream(imagePath.toFile());
-                fileOutputStream.getChannel().transferFrom(readableByteChannel, 0, Long.MAX_VALUE);
-            } catch (IOException e) {
-                // TODO rework the Exception handling
-                System.out.println(MessageFormat.format("Tile {0}: {1}", getName(), e.toString()));
+                url = new URL(urlString);
+            } catch (MalformedURLException e) {
+                throw new TileException("malformed url [" + urlString + "]", e);
             }
+
+            try (
+                    ReadableByteChannel readableByteChannel = Channels.newChannel(url.openStream());
+                    FileOutputStream fileOutputStream = new FileOutputStream(imagePath.toFile())
+            ) {
+                fileOutputStream.getChannel().transferFrom(readableByteChannel, 0, Long.MAX_VALUE);
+                System.out.println("downloaded: " + imagePath);
+            } catch (IOException e) {
+                if (e instanceof FileNotFoundException) {
+                    try {
+                        // we already know the image will be not found on the server, so we create a "water" flag instead if we have to re-process the same image
+                        Files.createFile(Paths.get(imagePath.toFile().getAbsolutePath() + ".water"));
+                    } catch (IOException e1) {
+                        System.out.println(MessageFormat.format("Tile {0}: {1}", imagePath, e.toString()));
+                    }
+                } else {
+                    // TODO rework the Exception handling
+                    System.out.println(MessageFormat.format("Tile {0}: {1}", imagePath, e.toString()));
+                }
+            } finally {
+                // avoid to flood the server to avoid HTTP 503
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    private boolean checkIfPreviouslyDownloaded() {
+        boolean alreadyDownloaded = imagePath.toFile().exists();
+
+        // check if we create a "water only flag" instead
+        if (!alreadyDownloaded) {
+            String water = imagePath.toFile().getAbsolutePath() + ".water";
+            alreadyDownloaded = new File(water).exists();
+        }
+
+        return alreadyDownloaded;
+    }
+
+    public BufferedImage getBufferedImage() throws IOException {
+        if (imagePath.toFile().exists()) {
+            // if the file exists, read it
+            return ImageIO.read(imagePath.toFile());
+        } else if (new File(imagePath.toFile().getAbsolutePath() + ".water").exists()) {
+            // otherwise, it's certainly a water tile -> transparent image
+            return new BufferedImage(256, 256, BufferedImage.TYPE_INT_ARGB);
         } else {
-            System.out.println("image already fetched, no download");
+            // real error...
+            throw new IOException("the file " + imagePath + " is really missing !?!");
         }
-    }
-
-    private void writeMapOnDisk(Path output) {
-        try (FileWriter writer = new FileWriter(output.resolve(getName() + ".map").toFile())) {
-            writer.write(getMap());
-        } catch (IOException e) {
-            // TODO rework the Exception handling
-            System.out.println(MessageFormat.format("Tile {0}: {1}", getName(), e.toString()));
-        }
-    }
-
-    public BufferedImage getBufferedImage(Path inputPath) throws IOException {
-        return ImageIO.read(imagePath.toFile());
     }
 
     public double getNorth() {
@@ -174,5 +186,13 @@ public class Tile {
 
     public double getEast() {
         return east;
+    }
+
+    public int getXtile() {
+        return xtile;
+    }
+
+    public int getYtile() {
+        return ytile;
     }
 }

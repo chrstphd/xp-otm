@@ -1,4 +1,4 @@
-package otm;
+package otm.util;
 
 public class Coordinates {
     private final double lat;
