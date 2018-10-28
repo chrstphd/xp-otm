@@ -16,13 +16,10 @@ This is a very rough draft, it's working but some features needs to be added:
 ### 1. generate the data
 
 1. look at the area you want map, 
-2. get the North-West (upper left) coordinates,
-3. convert those coordinates (degrees) into decimal,
-4. evaluate the size of the table (2x2 is a great start !),
-5. prepare a working folder to export the files,
-6. set the values into the OpenTopoMap source,
-7. run the class,
-8. the PNG files need to be migrated into TGA (see next point), the .map files are ready
+2. select the Lat/Lon degrees (52,-4 e.g.)
+The toll will generate a one-degree wide map in this version
+3. run the class,
+4. the PNG files need to be migrated into TGA (see next point), the .map files are ready
 
 ### 2. convert the PNG to TGA
 
@@ -38,3 +35,11 @@ I use the tool XnConvert to do so.
 ### 3. installation
 
 Move the .map and .tga files into the plugins folder of the X-Trident's Tornado (or the Harrier, currently in dev)
+
+## To-Do List
+
+* re-introducing the creation of a map based on 2 Coordinates
+* dividing the whole map in smaller images (but greater than 256x256 source)
+* create folders to regroup those smaller images
+
+
