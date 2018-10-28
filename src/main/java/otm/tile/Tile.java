@@ -2,6 +2,7 @@ package otm.tile;
 
 import otm.OpenTopoMap;
 import otm.util.Coordinates;
+import otm.util.WaterImage;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -20,6 +21,8 @@ import java.nio.file.Paths;
 import java.text.MessageFormat;
 
 public class Tile {
+    private static final int MAX_RETRIES = 5;
+
     private final Coordinates coordinates;
     private final int zoom;
 
@@ -110,39 +113,56 @@ public class Tile {
             // create the folders "zoom/x/"
             imagePath.getParent().toFile().mkdirs();
 
-            final String urlString = "https://" + ("abc".charAt((int) (Math.random() * 100) % 3)) + ".tile.opentopomap.org/" + getName() + ".png";
-            final URL url;
-            try {
-                url = new URL(urlString);
-            } catch (MalformedURLException e) {
-                throw new TileException("malformed url [" + urlString + "]", e);
+            for (int retry = 0; retry <= MAX_RETRIES; retry++) {
+                if (retry > 0) {
+                    System.out.println("retrying #" + retry + "/" + MAX_RETRIES + ": " + getName());
+                } else {
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                // we compute, again, the URL to change the server on the fly
+
+
+                final URL url;
+                try {
+                    url = new URL("https://" + ("abc".charAt((int) (Math.random() * 100) % 3)) + ".tile.opentopomap.org/" + getName() + ".png");
+                } catch (MalformedURLException e) {
+                    throw new TileException(e.toString(), e);
+                }
+
+                try (
+                        ReadableByteChannel readableByteChannel = Channels.newChannel(url.openStream());
+                        FileOutputStream fileOutputStream = new FileOutputStream(imagePath.toFile())
+                ) {
+                    fileOutputStream.getChannel().transferFrom(readableByteChannel, 0, Long.MAX_VALUE);
+                    System.out.println("downloaded: " + imagePath);
+                } catch (IOException e) {
+                    if (e instanceof FileNotFoundException) {
+                        try {
+                            System.out.println("resource " + getName() + " not found on the server, probably plain water: flagging as such");
+                            // we already know the image will be not found on the server, so we create a "water" flag instead if we have to re-process the same image
+                            Files.createFile(Paths.get(imagePath.toFile().getAbsolutePath() + ".water"));
+                            break;
+                        } catch (IOException e1) {
+                            System.out.println(MessageFormat.format("Tile {0}: {1}", imagePath, e.toString()));
+                        }
+                    } else {
+                        if (!e.getMessage().contains("503 for URL")) {
+                            throw new TileException(MessageFormat.format("Tile {0}: {1}", imagePath, e.toString()), e);
+                        }
+                    }
+                }
             }
 
-            try (
-                    ReadableByteChannel readableByteChannel = Channels.newChannel(url.openStream());
-                    FileOutputStream fileOutputStream = new FileOutputStream(imagePath.toFile())
-            ) {
-                fileOutputStream.getChannel().transferFrom(readableByteChannel, 0, Long.MAX_VALUE);
-                System.out.println("downloaded: " + imagePath);
-            } catch (IOException e) {
-                if (e instanceof FileNotFoundException) {
-                    try {
-                        // we already know the image will be not found on the server, so we create a "water" flag instead if we have to re-process the same image
-                        Files.createFile(Paths.get(imagePath.toFile().getAbsolutePath() + ".water"));
-                    } catch (IOException e1) {
-                        System.out.println(MessageFormat.format("Tile {0}: {1}", imagePath, e.toString()));
-                    }
-                } else {
-                    // TODO rework the Exception handling
-                    System.out.println(MessageFormat.format("Tile {0}: {1}", imagePath, e.toString()));
-                }
-            } finally {
-                // avoid to flood the server to avoid HTTP 503
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+            // try to avoid to flood the server to avoid HTTP 503
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
     }
@@ -164,8 +184,8 @@ public class Tile {
             // if the file exists, read it
             return ImageIO.read(imagePath.toFile());
         } else if (new File(imagePath.toFile().getAbsolutePath() + ".water").exists()) {
-            // otherwise, it's certainly a water tile -> transparent image
-            return new BufferedImage(256, 256, BufferedImage.TYPE_INT_ARGB);
+            // otherwise, it's certainly a water tile -> water image
+            return WaterImage.getBufferedImage();
         } else {
             // real error...
             throw new IOException("the file " + imagePath + " is really missing !?!");

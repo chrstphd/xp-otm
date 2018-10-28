@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-class DegreesToDecimalTest {
+class CoordinatesHelperTest {
 
     private static final Map<String, Double> inputs = new LinkedHashMap<>();
 
@@ -23,7 +23,7 @@ class DegreesToDecimalTest {
     void fromStringToDecimal() {
         for (String coords : inputs.keySet()) {
             try {
-                double result = DegreesToDecimal.toDecimal(coords);
+                double result = CoordinatesHelper.toDecimal(coords);
                 Assertions.assertTrue(isAround(inputs.get(coords).doubleValue(), result), "computing " + coords);
             } catch (Exception e) {
                 e.printStackTrace();

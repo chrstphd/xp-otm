@@ -2,7 +2,6 @@ package otm.tile;
 
 import otm.OpenTopoMap;
 import otm.util.Coordinates;
-import otm.util.DegreesToDecimal;
 
 import javax.imageio.ImageIO;
 import java.awt.Graphics2D;
@@ -20,16 +19,11 @@ public class TileMatrix {
     private final String tileMatrixName;
     private Tile[][] matrices;
 
-    /**
-     * @param latDegrees bottom edge latitude
-     * @param lonDegrees left edge longitude
-     * @param zoom
-     */
-    public TileMatrix(int latDegrees, int lonDegrees, int zoom) {
-        this.northWest = new Coordinates(DegreesToDecimal.toDecimal(latDegrees + 1, 0, 0), DegreesToDecimal.toDecimal(lonDegrees, 0, 0));
-        this.southEast = new Coordinates(DegreesToDecimal.toDecimal(latDegrees, 0, 0), DegreesToDecimal.toDecimal(lonDegrees + 1, 0, 0));
+    protected TileMatrix(Coordinates nw, Coordinates se, int zoom, String tileMatrixName) throws TileException {
+        this.northWest = nw;
+        this.southEast = se;
         this.zoom = zoom;
-        this.tileMatrixName = MessageFormat.format("{0}{1,number,00}{2}{3,number,000}", (latDegrees >= 0 ? "N" : "S"), Math.abs(latDegrees), (lonDegrees < 0 ? "W" : "E"), Math.abs(lonDegrees));
+        this.tileMatrixName = tileMatrixName;
     }
 
     public void generate() throws TileException {
@@ -37,7 +31,7 @@ public class TileMatrix {
 
         //if the file already exists, don't do anything.
         if (pngPath.toFile().exists()) {
-            System.out.println("### " +tileMatrixName+ " generation bypassed: files already exist");
+            System.out.println("### " + tileMatrixName + " generation bypassed: files already exist");
             return;
         }
 
@@ -49,19 +43,14 @@ public class TileMatrix {
         Tile nw = new Tile(northWest, zoom);
         Tile se = new Tile(southEast, zoom);
 
-        System.out.println(nw.getName());
-        System.out.println(se.getName());
-
-        System.out.println("zoom: " + zoom);
-
         int width = Math.abs(nw.getXtile() - se.getXtile()) + 1;
         int height = Math.abs(nw.getYtile() - se.getYtile()) + 1;
-        System.out.println("width: " + width);
-        System.out.println("height: " + height);
-        System.out.println("  -> " + (width * height) + " tile(s) to manage");
-        System.out.println("tiles (per 10): " + (width / 10d) + "x" + (height / 10d));
-        System.out.println("pixels (in 1): " + (width * 256) + "x" + (height * 256));
 
+        System.out.println("zoom: " + zoom);
+        System.out.println("width: " + width + " image(s)");
+        System.out.println("height: " + height + " image(s)");
+        System.out.println("  -> " + (width * height) + " tile(s) to manage");
+        System.out.println("combined pixels: " + (width * 256) + "x" + (height * 256));
 
         // generate the whole matrices
         matrices = new Tile[height][width];
@@ -100,7 +89,7 @@ public class TileMatrix {
         }
     }
 
-    private void writeFiles() {
+    private void writeFiles() throws TileException {
         System.out.println("merging tiles in one...");
         final Path pngPath = OpenTopoMap.OTM_WORK_DIR.resolve(tileMatrixName + ".png");
 
@@ -130,13 +119,11 @@ public class TileMatrix {
             // create the .map file only if the combined image is OK
             writeMapFile(width, height, combinedWidthInPixels, combinedHeightInPixels);
         } catch (IOException e) {
-            // TODO rework the Exception handling
-            System.out.println(MessageFormat.format("error when merging images: {0}", e.toString()));
-            e.printStackTrace();
+            throw new TileException(MessageFormat.format("error when merging images: {0}", e.toString()), e);
         }
     }
 
-    private void writeMapFile(int width, int height, int combinedWidthInPixels, int combinedHeightInPixels) {
+    private void writeMapFile(int width, int height, int combinedWidthInPixels, int combinedHeightInPixels) throws TileException {
         System.out.println("creating the description of the map...");
         final Path mapPath = OpenTopoMap.OTM_WORK_DIR.resolve(tileMatrixName + ".map");
         StringBuilder builder = new StringBuilder();
@@ -150,8 +137,7 @@ public class TileMatrix {
         try (FileWriter writer = new FileWriter(mapPath.toFile())) {
             writer.write(builder.toString());
         } catch (IOException e) {
-            // TODO rework the Exception handling
-            System.out.println(MessageFormat.format("error when creating {}.map: {}", tileMatrixName, e.toString()));
+            throw new TileException(MessageFormat.format("error when creating {}.map: {}", tileMatrixName, e.toString()), e);
         }
     }
 }

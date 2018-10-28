@@ -3,7 +3,7 @@ package otm.util;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class DegreesToDecimal {
+public class CoordinatesHelper {
     private static final Pattern pattern = Pattern.compile("([+-]?[0-9]{1,3})[° ]([0-9]{1,3})[\\. ']([0-9]{1,3})\\\"?");
 
     public static double toDecimal(String text) throws Exception {
@@ -31,7 +31,7 @@ public class DegreesToDecimal {
         }
     }
 
-    public static double toDecimal(int degrees, int minutes, float seconds) {
+    public static double toDecimal(int degrees, int minutes, double seconds) {
         return (degrees >= 0 ? 1 : -1) * (Math.abs(degrees) + (minutes / 60d) + (seconds / 3600d));
     }
 }

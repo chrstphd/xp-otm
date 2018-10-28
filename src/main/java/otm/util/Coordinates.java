@@ -16,4 +16,12 @@ public class Coordinates {
     public double getLon() {
         return lon;
     }
+
+    @Override
+    public String toString() {
+        return "Coordinates{" +
+                "lat=" + lat +
+                ", lon=" + lon +
+                '}';
+    }
 }
