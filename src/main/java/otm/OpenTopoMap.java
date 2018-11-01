@@ -1,5 +1,6 @@
 package otm;
 
+import otm.airport.AirportNotFoundException;
 import otm.tile.TileException;
 import otm.tile.TileMatrix;
 import otm.tile.TileMatrixFactory;
@@ -36,26 +37,42 @@ public class OpenTopoMap {
         }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args){
 
-        // list of "one degree wide" tiles you want produce
-        final int[][] coords = new int[][]{
-                {53, -5}, {53, -4}, {53, -3},
-                {52, -5}, {52, -4}, {52, -3},
-                {47, 7}, {47, 8}, {47, 9},
-                {46, 7}, {46, 8}, {46, 9},
-                {45, 7}, {45, 8}, {45, 9}, {45, 10}
-        };
+//        // list of "one degree wide" tiles you want produce
+//        final int[][] coords = new int[][]{
+//                {53, -5}, {53, -4}, {53, -3},
+//                {52, -5}, {52, -4}, {52, -3},
+//                {47, 7}, {47, 8}, {47, 9},
+//                {46, 7}, {46, 8}, {46, 9},
+//                {45, 7}, {45, 8}, {45, 9}, {45, 10}
+//        };
+//
+//        // start the generation
+//        for (int i = 0; i < coords.length; i++) {
+//            try {
+//                TileMatrixFactory.build(new Coordinates(coords[i][0], coords[i][1]), 13).generate();
+//            } catch (TileException e) {
+//                e.printStackTrace();
+//            }
+//        }
+//
+//
+//        for (int i = 47; i >= 45; i--) {
+//            for (int j = 5; j <= 13; j++) {
+//                try {
+//                    TileMatrixFactory.build(new Coordinates(i, j), 13).generate();
+//                } catch (TileException e) {
+//                    e.printStackTrace();
+//                }
+//            }
+//        }
 
-        // start the generation
-        for (int i = 0; i < coords.length; i++) {
-            try {
-                TileMatrixFactory.build(new Coordinates(coords[i][0], coords[i][1]), 13).generate();
-            } catch (TileException e) {
-                e.printStackTrace();
-            }
+        try {
+            TileMatrixFactory.build("LFGJ", "LIPV", 13).generate();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-
 
         System.out.println("Now, you have to:");
         System.out.println("  - transform each PNG in TGA (no compressed, bottom-up),");

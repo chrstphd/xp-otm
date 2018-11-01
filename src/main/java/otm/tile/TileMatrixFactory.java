@@ -1,11 +1,23 @@
 package otm.tile;
 
+import otm.airport.AirportNotFoundException;
+import otm.airport.Airports;
 import otm.util.Coordinates;
 
 import java.text.MessageFormat;
 
 public class TileMatrixFactory {
 
+    /**
+     * Build the matrix based on the NW and SE corners, the zoom level and a name.
+     *
+     * @param nw   the NorthWest coordinates
+     * @param se   the SouthEast coordinates
+     * @param zoom the zoom level
+     * @param name the name of the matrix
+     * @return
+     * @throws TileException
+     */
     public static TileMatrix build(Coordinates nw, Coordinates se, int zoom, String name) throws TileException {
         if (nw.getLat() < se.getLat()) {
             throw new TileException(name + "> NW latitude [" + nw.getLat() + "] must be higher than SW latitude [" + se.getLat() + "]");
@@ -19,9 +31,9 @@ public class TileMatrixFactory {
     }
 
     /**
-     * Comute the tile coordinates from the point
+     * Compute the tile coordinates covering a dedicated point
      *
-     * @param point
+     * @param point the coordinate of a point
      * @param zoom
      * @return
      */
@@ -44,22 +56,9 @@ public class TileMatrixFactory {
         return new TileMatrix(nw, se, zoom, name);
     }
 
-//    protected TileMatrix(Coordinates coords, int zoom) throws TileException {
-//        this(
-//                (int) coords.getLat(),
-//                (int) coords.getLon(),
-//                zoom
-//        );
-//    }
-//
-//    protected TileMatrix(int latDegrees, int lonDegrees, int zoom) throws TileException {
-//        this(
-////                new Coordinates(CoordinatesHelper.toDecimal(latDegrees + 1, 0, 0), CoordinatesHelper.toDecimal(lonDegrees, 0, 0)),
-//                new Coordinates(CoordinatesHelper.toDecimal(latDegrees, 59, 59.99999), CoordinatesHelper.toDecimal(lonDegrees, 0, 0)),
-////                new Coordinates(CoordinatesHelper.toDecimal(latDegrees, 0, 0), CoordinatesHelper.toDecimal(lonDegrees + 1, 0, 0)),
-//                new Coordinates(CoordinatesHelper.toDecimal(latDegrees, 0, 0), CoordinatesHelper.toDecimal(lonDegrees, 59, 59.99999)),
-//                zoom,
-//                MessageFormat.format("{0}{1,number,00}{2}{3,number,000}", (latDegrees >= 0 ? "N" : "S"), Math.abs(latDegrees), (lonDegrees < 0 ? "W" : "E"), Math.abs(lonDegrees))
-//        );
-//    }
+    public static TileMatrix build(String icaoNW, String icaoSE, int zoom) throws TileException, AirportNotFoundException {
+        Coordinates nw = Airports.getAirportCoordinates(icaoNW);
+        Coordinates se = Airports.getAirportCoordinates(icaoSE);
+        return build(nw, se, zoom, icaoNW + "-" + icaoSE + "-" + zoom);
+    }
 }

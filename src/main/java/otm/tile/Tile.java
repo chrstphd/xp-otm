@@ -114,19 +114,7 @@ public class Tile {
             imagePath.getParent().toFile().mkdirs();
 
             for (int retry = 0; retry <= MAX_RETRIES; retry++) {
-                if (retry > 0) {
-                    System.out.println("retrying #" + retry + "/" + MAX_RETRIES + ": " + getName());
-                } else {
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-
                 // we compute, again, the URL to change the server on the fly
-
-
                 final URL url;
                 try {
                     url = new URL("https://" + ("abc".charAt((int) (Math.random() * 100) % 3)) + ".tile.opentopomap.org/" + getName() + ".png");
@@ -134,12 +122,25 @@ public class Tile {
                     throw new TileException(e.toString(), e);
                 }
 
+                if (retry > 0) {
+                    System.out.println("retrying #" + retry + "/" + MAX_RETRIES + ": " + url);
+
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+
                 try (
                         ReadableByteChannel readableByteChannel = Channels.newChannel(url.openStream());
                         FileOutputStream fileOutputStream = new FileOutputStream(imagePath.toFile())
                 ) {
                     fileOutputStream.getChannel().transferFrom(readableByteChannel, 0, Long.MAX_VALUE);
-                    System.out.println("downloaded: " + imagePath);
+                    //System.out.println("downloaded: " + imagePath);
+
+                    // break the loop
+                    break;
                 } catch (IOException e) {
                     if (e instanceof FileNotFoundException) {
                         try {
