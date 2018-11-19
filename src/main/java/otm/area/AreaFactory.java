@@ -1,12 +1,15 @@
-package otm.tile;
+package otm.area;
 
 import otm.airport.AirportNotFoundException;
 import otm.airport.Airports;
+import otm.tile.SubTilingPolicy;
+import otm.tile.TileException;
 import otm.util.Coordinates;
+import otm.util.CoordinatesHelper;
 
 import java.text.MessageFormat;
 
-public class TileMatrixFactory {
+public class AreaFactory {
 
     /**
      * Build the matrix based on the NW and SE corners, the zoom level and a name.
@@ -18,7 +21,7 @@ public class TileMatrixFactory {
      * @return
      * @throws TileException
      */
-    public static TileMatrix build(Coordinates nw, Coordinates se, int zoom, String name) throws TileException {
+    public static Area build(Coordinates nw, Coordinates se, int zoom, String name, SubTilingPolicy policy) throws TileException {
         if (nw.getLat() < se.getLat()) {
             throw new TileException(name + "> NW latitude [" + nw.getLat() + "] must be higher than SW latitude [" + se.getLat() + "]");
         }
@@ -27,7 +30,12 @@ public class TileMatrixFactory {
             throw new TileException(name + "> NW longitude [" + nw.getLon() + "] must be smaller than SW longitude [" + se.getLon() + "]");
         }
 
-        return new TileMatrix(nw, se, zoom, name);
+        return new Area(
+                CoordinatesHelper.toTileCoordinateUpperNW(nw),
+                CoordinatesHelper.toTileCoordinateLowerSE(se),
+                zoom,
+                policy
+        );
     }
 
     /**
@@ -37,7 +45,7 @@ public class TileMatrixFactory {
      * @param zoom
      * @return
      */
-    public static TileMatrix build(Coordinates point, int zoom) throws TileException {
+    public static Area build(Coordinates point, int zoom, SubTilingPolicy policy) throws TileException {
         final int lat = (int) point.getLat();
         final int lon = (int) point.getLon();
 
@@ -53,12 +61,20 @@ public class TileMatrixFactory {
 
         final String name = MessageFormat.format("{0}{1,number,00}{2}{3,number,000}", (lat >= 0 ? "N" : "S"), Math.abs(lat), (lon < 0 ? "W" : "E"), Math.abs(lon));
 
-        return new TileMatrix(nw, se, zoom, name);
+        return build(
+                nw, se, zoom,
+                name,
+                policy);
     }
 
-    public static TileMatrix build(String icaoNW, String icaoSE, int zoom) throws TileException, AirportNotFoundException {
+    public static Area build(String icaoNW, String icaoSE, int zoom, SubTilingPolicy policy) throws TileException, AirportNotFoundException {
         Coordinates nw = Airports.getAirportCoordinates(icaoNW);
         Coordinates se = Airports.getAirportCoordinates(icaoSE);
-        return build(nw, se, zoom, icaoNW + "-" + icaoSE + "-" + zoom);
+
+        return build(
+                nw, se, zoom,
+                icaoNW + "-" + icaoSE + "-" + zoom,
+                policy
+        );
     }
 }

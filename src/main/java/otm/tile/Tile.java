@@ -1,219 +1,175 @@
 package otm.tile;
 
 import otm.OpenTopoMap;
+import otm.common.MapDescription;
+import otm.shard.Shard;
 import otm.util.Coordinates;
-import otm.util.WaterImage;
+import otm.util.CoordinatesHelper;
+import otm.util.ErrorManager;
+import otm.util.ProgressBar;
 
 import javax.imageio.ImageIO;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.text.MessageFormat;
 
 public class Tile {
-    private static final int MAX_RETRIES = 5;
-
-    private final Coordinates coordinates;
+    private final Coordinates coords;
+    private final Coordinates nw;
+    private final Coordinates se;
     private final int zoom;
+    private final SubTilingPolicy subTilingPolicy;
+    private final String name;
 
-    private int xtile;
-    private int ytile;
+    private Shard[][] shards;
+    private int verticalSubdivisions;
+    private int horizontalSubdivisions;
 
-    private double north;
-    private double south;
-    private double west;
-    private double east;
-
-    private Path imagePath;
-
-    public Tile(Coordinates coordinates, int zoom) {
-        this.coordinates = coordinates;
+    public Tile(Coordinates coords, int zoom, SubTilingPolicy subTilingPolicy) {
+        // get only the SW coordinates
+        this.coords = new Coordinates((int) coords.getLat(), (int) coords.getLon());
+        this.nw = CoordinatesHelper.toTileCoordinateUpperNW(coords);
+        this.se = CoordinatesHelper.toTileCoordinateLowerSE(coords);
         this.zoom = zoom;
+        this.subTilingPolicy = subTilingPolicy;
 
-        getTileNumber();
-
-        north = tile2lat(ytile, zoom);
-        south = tile2lat(ytile + 1, zoom);
-        west = tile2lon(xtile, zoom);
-        east = tile2lon(xtile + 1, zoom);
-
-        imagePath = OpenTopoMap.OTM_CACHE_DIR.resolve(getName() + ".png");
+        this.name = MessageFormat.format("{0}{1,number,00}{2}{3,number,000}",
+                (coords.getLat() >= 0 ? "N" : "S"), Math.abs((int) coords.getLat()),
+                (coords.getLon() < 0 ? "W" : "E"), Math.abs((int) coords.getLon()));
     }
 
-    /**
-     * Compute the tiling coordinates (x/y) from a lat,lon coordinates
-     */
-    private void getTileNumber() {
-        int xtile = (int) Math.floor((coordinates.getLon() + 180) / 360 * (1 << zoom));
-        int ytile = (int) Math.floor((1 - Math.log(Math.tan(Math.toRadians(coordinates.getLat())) + 1 / Math.cos(Math.toRadians(coordinates.getLat()))) / Math.PI) / 2 * (1 << zoom));
-
-        if (xtile < 0) xtile = 0;
-
-        if (xtile >= (1 << zoom)) xtile = ((1 << zoom) - 1);
-
-        if (ytile < 0) ytile = 0;
-
-        if (ytile >= (1 << zoom)) ytile = ((1 << zoom) - 1);
-
-        this.xtile = xtile;
-        this.ytile = ytile;
-    }
-
-    private double tile2lon(int x, int z) {
-        return x / Math.pow(2.0, z) * 360.0 - 180;
-    }
-
-    private double tile2lat(int y, int z) {
-        double n = Math.PI - (2.0 * Math.PI * y) / Math.pow(2.0, z);
-        return Math.toDegrees(Math.atan(Math.sinh(n)));
+    @Override
+    public String toString() {
+        return "Tile{" + name + '}';
     }
 
     public String getName() {
-        return zoom + "/" + xtile + "/" + ytile;
+        return name;
     }
 
-    /**
-     * Create the tile next to the right of the current tile
-     * See the tiles like a simple table.
-     *
-     * @return
-     */
-    public Tile getRightNeighbor() {
-        double middleLon = west + Math.abs(west - east) / 2;
-        double nextLon = middleLon + Math.abs(west - east);
+    public int prepare() {
+        Shard nwShard = new Shard(nw, zoom);
+        Shard seShard = new Shard(se, zoom);
 
-        return new Tile(new Coordinates(coordinates.getLat(), nextLon), zoom);
-    }
+        int width = Math.abs(nwShard.getXtile() - seShard.getXtile()) + 1;
+        int height = Math.abs(nwShard.getYtile() - seShard.getYtile()) + 1;
 
-    /**
-     * Create the tile just lower of the current tile.
-     * See the tiles like a simple table
-     *
-     * @return
-     */
-    public Tile getLowerNeighbor() {
-        double middleLat = south + Math.abs(north - south) / 2;
-        double nextLat = middleLat - Math.abs(north - south);
+        // generate the shard matrix
+        shards = new Shard[height][width];
 
-        return new Tile(new Coordinates(nextLat, coordinates.getLon()), zoom);
-    }
-
-    public void downloadImage() throws TileException {
-        if (!checkIfPreviouslyDownloaded()) {
-            // create the folders "zoom/x/"
-            imagePath.getParent().toFile().mkdirs();
-
-            for (int retry = 0; retry <= MAX_RETRIES; retry++) {
-                // we compute, again, the URL to change the server on the fly
-                final URL url;
-                try {
-                    url = new URL("https://" + ("abc".charAt((int) (Math.random() * 100) % 3)) + ".tile.opentopomap.org/" + getName() + ".png");
-                } catch (MalformedURLException e) {
-                    throw new TileException(e.toString(), e);
-                }
-
-                if (retry > 0) {
-                    System.out.println("retrying #" + retry + "/" + MAX_RETRIES + ": " + url);
-
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-
-                try (
-                        ReadableByteChannel readableByteChannel = Channels.newChannel(url.openStream());
-                        FileOutputStream fileOutputStream = new FileOutputStream(imagePath.toFile())
-                ) {
-                    fileOutputStream.getChannel().transferFrom(readableByteChannel, 0, Long.MAX_VALUE);
-                    //System.out.println("downloaded: " + imagePath);
-
-                    // break the loop
-                    break;
-                } catch (IOException e) {
-                    if (e instanceof FileNotFoundException) {
-                        try {
-                            System.out.println("resource " + getName() + " not found on the server, probably plain water: flagging as such");
-                            // we already know the image will be not found on the server, so we create a "water" flag instead if we have to re-process the same image
-                            Files.createFile(Paths.get(imagePath.toFile().getAbsolutePath() + ".water"));
-                            break;
-                        } catch (IOException e1) {
-                            System.out.println(MessageFormat.format("Tile {0}: {1}", imagePath, e.toString()));
-                        }
+        // fill the shard matrix
+        for (int v = 0; v < height; v++) {
+            for (int h = 0; h < width; h++) {
+                if (v == 0 && h == 0) {
+                    shards[0][h] = nwShard;
+                } else {
+                    if (h == 0) {
+                        // create a new tile based on the previous row
+                        shards[v][h] = shards[v - 1][h].getLowerNeighbor();
                     } else {
-                        if (!e.getMessage().contains("503 for URL")) {
-                            throw new TileException(MessageFormat.format("Tile {0}: {1}", imagePath, e.toString()), e);
-                        }
+                        // create a new tile base on the previous tile
+                        shards[v][h] = shards[v][h - 1].getRightNeighbor();
+                    }
+                }
+            }
+        }
+
+        // compute the sub-tiling
+        this.verticalSubdivisions = (shards.length / subTilingPolicy.nbOfShards) + (shards.length % subTilingPolicy.nbOfShards == 0 ? 0 : 1);
+        this.horizontalSubdivisions = (shards[0].length / subTilingPolicy.nbOfShards) + (shards[0].length % subTilingPolicy.nbOfShards == 0 ? 0 : 1);
+
+        System.out.println("name: " + name);
+        System.out.println("zoom: " + zoom);
+        System.out.println("shard(s): " + height + "x" + width + " shard(s)");
+        System.out.println("  -> " + (width * height) + " shards(s)");
+        System.out.println("  => " + (height * 256) + "x" + (width * 256) + " combined pixels");
+        System.out.println("sub-tiling policy: " + subTilingPolicy.name());
+        System.out.println("  -> " + verticalSubdivisions + "x" + horizontalSubdivisions + " sub-tiles");
+        System.out.println("  -> " + (subTilingPolicy.nbOfShards * 256) + "x" + (subTilingPolicy.nbOfShards * 256) + " pixels per sub-tile");
+        System.out.println("------------------");
+
+        return (height * width);
+    }
+
+    public void generate(ProgressBar progress) {
+        final int nbOfShards = shards.length * shards[0].length;
+
+        // download the image of each shard
+        try (ProgressBar.ProgressItem shardsProgress = progress.createProgressItem("[# ] Downloading shards", nbOfShards)) {
+            long currentShardIndex = 0;
+            for (int v = 0; v < shards.length; v++) {
+                for (int h = 0; h < shards[0].length; h++) {
+                    shardsProgress.increment(MessageFormat.format("processing shard #{0}/{1}", currentShardIndex++, nbOfShards));
+                    shards[v][h].generate();
+
+                }
+            }
+        }
+
+        // define the output folder in work/
+        Path tileWorkFolder = OpenTopoMap.OTM_WORK_DIR.resolve(getName());
+
+        // create output folder
+        tileWorkFolder.toFile().mkdirs();
+
+        // group shards as described by the policy
+        try (ProgressBar.ProgressItem shardsProgress = progress.createProgressItem("[##] Merging shards", verticalSubdivisions * horizontalSubdivisions)) {
+            for (int v = 0; v < verticalSubdivisions; v++) {
+                for (int h = 0; h < horizontalSubdivisions; h++) {
+                    shardsProgress.increment();
+                    String subTileName = MessageFormat.format("map-{0,number,000}-{1,number,000}", v, h);
+                    mergeShards(v * subTilingPolicy.nbOfShards, h * subTilingPolicy.nbOfShards, tileWorkFolder, subTileName);
+                }
+            }
+        }
+    }
+
+    private void mergeShards(int vIndex, int hIndex, Path outFolderPath, String subTileName) {
+        if (outFolderPath.resolve(subTileName + ".png").toFile().exists()) {
+            return;
+        }
+
+        final int height = Math.min(shards.length - vIndex, subTilingPolicy.nbOfShards);
+        final int width = Math.min(shards[0].length - hIndex, subTilingPolicy.nbOfShards);
+
+        final int mergedWidthInPixels = width * 256;
+        final int mergedHeightInPixels = height * 256;
+
+        BufferedImage merged = new BufferedImage(mergedWidthInPixels, mergedHeightInPixels, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = merged.createGraphics();
+        try {
+            for (int v = 0; v < height; v++) {
+                for (int h = 0; h < width; h++) {
+                    try {
+                        g.drawImage(shards[vIndex + v][hIndex + h].getBufferedImage(), h * 256, v * 256, null);
+                    } catch (IOException e) {
+                        throw e;
                     }
                 }
             }
 
-            // try to avoid to flood the server to avoid HTTP 503
-            try {
-                Thread.sleep(200);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            ImageIO.write(merged, "PNG", outFolderPath.resolve(subTileName + ".png").toFile());
+
+            // create the .map file only if the combined image is OK
+            MapDescription map = new MapDescription(
+                    subTileName,
+                    mergedWidthInPixels,
+                    mergedHeightInPixels,
+                    shards[vIndex][hIndex].getWest(),
+                    shards[vIndex][hIndex + width - 1].getEast(),
+                    shards[vIndex][hIndex].getNorth(),
+                    shards[vIndex + height - 1][hIndex + width - 1].getSouth()
+            );
+
+            // write the .map descriptor
+            map.writeMapFile(outFolderPath);
+        } catch (Exception e) {
+            e.printStackTrace();
+            ErrorManager.getInstance().addError("tile", "unable to merge " + subTileName, e);
         }
-    }
 
-    private boolean checkIfPreviouslyDownloaded() {
-        boolean alreadyDownloaded = imagePath.toFile().exists();
-
-        // check if we create a "water only flag" instead
-        if (!alreadyDownloaded) {
-            String water = imagePath.toFile().getAbsolutePath() + ".water";
-            alreadyDownloaded = new File(water).exists();
-        }
-
-        return alreadyDownloaded;
-    }
-
-    public BufferedImage getBufferedImage() throws IOException {
-        if (imagePath.toFile().exists()) {
-            // if the file exists, read it
-            return ImageIO.read(imagePath.toFile());
-        } else if (new File(imagePath.toFile().getAbsolutePath() + ".water").exists()) {
-            // otherwise, it's certainly a water tile -> water image
-            return WaterImage.getBufferedImage();
-        } else {
-            // real error...
-            throw new IOException("the file " + imagePath + " is really missing !?!");
-        }
-    }
-
-    public double getNorth() {
-        return north;
-    }
-
-    public double getSouth() {
-        return south;
-    }
-
-    public double getWest() {
-        return west;
-    }
-
-    public double getEast() {
-        return east;
-    }
-
-    public int getXtile() {
-        return xtile;
-    }
-
-    public int getYtile() {
-        return ytile;
+        ErrorManager.getInstance().dump(System.out);
     }
 }

@@ -3,7 +3,6 @@ package otm.airport;
 import otm.util.Coordinates;
 
 import java.io.FileReader;
-import java.io.IOException;
 import java.util.Properties;
 
 public class Airports {
@@ -12,13 +11,14 @@ public class Airports {
     static {
         try (FileReader fr = new FileReader(ClassLoader.getSystemResource("apt.txt").getFile())) {
             airports.load(fr);
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (Exception e) {
+            throw new RuntimeException("unable to load apt.txt: " + e.getMessage(), e);
         }
     }
 
     public static Coordinates getAirportCoordinates(String apt) throws AirportNotFoundException {
         String coords = airports.getProperty(apt);
+
         if (coords != null) {
             String[] split = coords.split(" ");
             return new Coordinates(
