@@ -34,4 +34,25 @@ public class CoordinatesHelper {
     public static double toDecimal(int degrees, int minutes, double seconds) {
         return (degrees >= 0 ? 1 : -1) * (Math.abs(degrees) + (minutes / 60d) + (seconds / 3600d));
     }
+
+    public static Coordinates toTileCoordinateUpperNW(Coordinates coordinates) {
+        final int lat = (int) coordinates.getLat();
+        final int lon = (int) coordinates.getLon();
+
+        return new Coordinates(
+                lat >= 0 ? (lat + 0.99999) : lat,
+                lon >= 0 ? lon : (lon - 1)
+        );
+    }
+
+    public static Coordinates toTileCoordinateLowerSE(Coordinates coordinates) {
+        final int lat = (int) coordinates.getLat();
+        final int lon = (int) coordinates.getLon();
+
+        return new Coordinates(
+                lat >= 0 ? lat : (lat - 1),
+                lon >= 0 ? (lon + 0.99999) : lon
+        );
+    }
+
 }
