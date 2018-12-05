@@ -39,59 +39,59 @@ public class OpenTopoMap {
     public static void main(String[] args) {
 
         // example to cover an area between EGOV and EGCW, zoom 13, byt images of 8x8 shards so 2048x2048 pixels.
-//        try {
-//            AreaFactory.build("EGOV", "EGCW", 13, SubTilingPolicy.EIGHT_BY_EIGHT_SHARDS)
-//                    .generate();
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        } finally {
-//            ErrorManager.getInstance().dump(System.out);
-//        }
-
-        // example to cover an area between upper left and lower right coordinates
-//        Arrays.asList(11).forEach(z->{
-//            Arrays.asList(SubTilingPolicy.FOUR_BY_FOUR_SHARDS, SubTilingPolicy.EIGHT_BY_EIGHT_SHARDS).forEach( p-> {
-//
-//
-//
-//        try {
-//            AreaFactory.build(
-//                    new Coordinates(
-//                            CoordinatesHelper.toDecimal("N38°27.69"),
-//                            CoordinatesHelper.toDecimal("E12°31.77")
-//                    ),
-//                    new Coordinates(
-//                            CoordinatesHelper.toDecimal("N37°31.52"),
-//                            CoordinatesHelper.toDecimal("E13°58.12")
-//                    ),
-//                    z,
-//                    "AroundPalermo",
-//                    p)
-//                    .generate();
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        } finally {
-//            ErrorManager.getInstance().dump(System.out);
-//        }
-//
-//
-//            });
-//        });
-
-
         try {
-            AreaFactory.build(
-                    CoordinatesHelper.toCoordinates("N38°28.53' E11°32.20'"),
-                    CoordinatesHelper.toCoordinates("N36°32.46' E15°56.87'"),
-                    11,
-                    "Sicilia",
-                    SubTilingPolicy.FOUR_BY_FOUR_SHARDS)
+            AreaFactory.build("EGOV", "EGCW", 13, SubTilingPolicy.EIGHT_BY_EIGHT_SHARDS)
                     .generate();
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
             ErrorManager.getInstance().dump(System.out);
         }
+
+        // example to cover an area between upper left and lower right coordinates
+        Arrays.asList(11).forEach(z->{
+            Arrays.asList(SubTilingPolicy.FOUR_BY_FOUR_SHARDS).forEach( p-> {
+
+
+
+        try {
+            AreaFactory.build(
+                    new Coordinates(
+                            CoordinatesHelper.toDecimal("N38°27.69"),
+                            CoordinatesHelper.toDecimal("E12°31.77")
+                    ),
+                    new Coordinates(
+                            CoordinatesHelper.toDecimal("N37°31.52"),
+                            CoordinatesHelper.toDecimal("E13°58.12")
+                    ),
+                    z,
+                    "AroundPalermo",
+                    p)
+                    .generate();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            ErrorManager.getInstance().dump(System.out);
+        }
+
+
+            });
+        });
+
+
+//        try {
+//            AreaFactory.build(
+//                    CoordinatesHelper.toCoordinates("N36°29.54' E14°0.19'"),
+//                    CoordinatesHelper.toCoordinates("N35°31.96' E14°58.20'"),
+//                    11,
+//                    "Malta",
+//                    SubTilingPolicy.FOUR_BY_FOUR_SHARDS)
+//                    .generate();
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        } finally {
+//            ErrorManager.getInstance().dump(System.out);
+//        }
 
 
 

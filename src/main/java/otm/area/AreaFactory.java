@@ -31,6 +31,7 @@ public class AreaFactory {
         }
 
         return new Area(
+                name,
                 CoordinatesHelper.toTileCoordinateUpperNW(nw),
                 CoordinatesHelper.toTileCoordinateLowerSE(se),
                 zoom,

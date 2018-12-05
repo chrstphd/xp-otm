@@ -13,6 +13,7 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.MessageFormat;
 
 public class Tile {
@@ -21,7 +22,7 @@ public class Tile {
     private final Coordinates se;
     private final int zoom;
     private final SubTilingPolicy subTilingPolicy;
-    private final String name;
+    private final String tileName;
 
     private Shard[][] shards;
     private int verticalSubdivisions;
@@ -35,7 +36,7 @@ public class Tile {
         this.zoom = zoom;
         this.subTilingPolicy = subTilingPolicy;
 
-        this.name = MessageFormat.format("{0}{1,number,00}{2}{3,number,000}_{4}_{5}",
+        this.tileName = MessageFormat.format("{0}{1,number,00}{2}{3,number,000}_{4}_{5}",
                 (coords.getLat() >= 0 ? "N" : "S"), Math.abs((int) coords.getLat()),
                 (coords.getLon() < 0 ? "W" : "E"), Math.abs((int) coords.getLon()),
                 zoom,
@@ -45,11 +46,7 @@ public class Tile {
 
     @Override
     public String toString() {
-        return "Tile{" + name + '}';
-    }
-
-    public String getName() {
-        return name;
+        return "Tile{" + tileName + '}';
     }
 
     public int prepare() {
@@ -83,7 +80,7 @@ public class Tile {
         this.verticalSubdivisions = (shards.length / subTilingPolicy.nbOfShards) + (shards.length % subTilingPolicy.nbOfShards == 0 ? 0 : 1);
         this.horizontalSubdivisions = (shards[0].length / subTilingPolicy.nbOfShards) + (shards[0].length % subTilingPolicy.nbOfShards == 0 ? 0 : 1);
 
-        System.out.println("name: " + name);
+        System.out.println("tileName: " + tileName);
         System.out.println("zoom: " + zoom);
         System.out.println("shard(s): " + height + "x" + width + " shard(s)");
         System.out.println("  -> " + (width * height) + " shards(s)");
@@ -96,7 +93,7 @@ public class Tile {
         return (height * width);
     }
 
-    public void generate(ProgressBar progress) {
+    public void generate(String areaName, ProgressBar progress) {
         final int nbOfShards = shards.length * shards[0].length;
 
         // download the image of each shard
@@ -111,7 +108,7 @@ public class Tile {
         }
 
         // define the output folder in work/
-        Path tileWorkFolder = OpenTopoMap.OTM_WORK_DIR.resolve(getName());
+        Path tileWorkFolder = Paths.get(OpenTopoMap.OTM_WORK_DIR.toFile().getAbsolutePath(), areaName, tileName);
 
         // create output folder
         tileWorkFolder.toFile().mkdirs();
@@ -121,7 +118,7 @@ public class Tile {
             for (int v = 0; v < verticalSubdivisions; v++) {
                 for (int h = 0; h < horizontalSubdivisions; h++) {
                     shardsProgress.increment();
-                    String subTileName = MessageFormat.format("{0}-{1,number,000}-{2,number,000}", name, v, h);
+                    String subTileName = MessageFormat.format("{0}-{1,number,000}-{2,number,000}", tileName, v, h);
                     mergeShards(v * subTilingPolicy.nbOfShards, h * subTilingPolicy.nbOfShards, tileWorkFolder, subTileName);
                 }
             }
@@ -173,5 +170,9 @@ public class Tile {
         }
 
         ErrorManager.getInstance().dump(System.out);
+    }
+
+    public String getTileName() {
+        return tileName;
     }
 }
