@@ -35,9 +35,12 @@ public class Tile {
         this.zoom = zoom;
         this.subTilingPolicy = subTilingPolicy;
 
-        this.name = MessageFormat.format("{0}{1,number,00}{2}{3,number,000}",
+        this.name = MessageFormat.format("{0}{1,number,00}{2}{3,number,000}_{4}_{5}",
                 (coords.getLat() >= 0 ? "N" : "S"), Math.abs((int) coords.getLat()),
-                (coords.getLon() < 0 ? "W" : "E"), Math.abs((int) coords.getLon()));
+                (coords.getLon() < 0 ? "W" : "E"), Math.abs((int) coords.getLon()),
+                zoom,
+                subTilingPolicy.nbOfShards
+        );
     }
 
     @Override
@@ -103,7 +106,6 @@ public class Tile {
                 for (int h = 0; h < shards[0].length; h++) {
                     shardsProgress.increment(MessageFormat.format("processing shard #{0}/{1}", currentShardIndex++, nbOfShards));
                     shards[v][h].generate();
-
                 }
             }
         }
@@ -119,7 +121,7 @@ public class Tile {
             for (int v = 0; v < verticalSubdivisions; v++) {
                 for (int h = 0; h < horizontalSubdivisions; h++) {
                     shardsProgress.increment();
-                    String subTileName = MessageFormat.format("map-{0,number,000}-{1,number,000}", v, h);
+                    String subTileName = MessageFormat.format("{0}-{1,number,000}-{2,number,000}", name, v, h);
                     mergeShards(v * subTilingPolicy.nbOfShards, h * subTilingPolicy.nbOfShards, tileWorkFolder, subTileName);
                 }
             }

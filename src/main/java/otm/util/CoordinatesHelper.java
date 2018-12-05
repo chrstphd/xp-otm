@@ -4,7 +4,19 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class CoordinatesHelper {
-    private static final Pattern pattern = Pattern.compile("([+-]?[0-9]{1,3})[° ]([0-9]{1,3})[\\. ']([0-9]{1,3})\\\"?");
+    private static final Pattern pattern = Pattern.compile("([+-]?[0-9]{1,3})[° ]([0-9]{1,3})[\\. ']([0-9]{1,3})'?\\\"?");
+
+    public static Coordinates toCoordinates(String text) throws Exception {
+        String [] split = text.split(" ");
+        if(split.length!=2){
+            throw new Exception("unreadable coordinates: " + text);
+        }
+
+        return new Coordinates(
+                toDecimal(split[0]),
+                toDecimal(split[1])
+        );
+    }
 
     public static double toDecimal(String text) throws Exception {
         switch (text.charAt(0)) {
