@@ -6,8 +6,7 @@ import otm.tile.SubTilingPolicy;
 import otm.tile.TileException;
 import otm.util.Coordinates;
 import otm.util.CoordinatesHelper;
-
-import java.text.MessageFormat;
+import otm.util.NameTool;
 
 public class AreaFactory {
 
@@ -31,7 +30,7 @@ public class AreaFactory {
         }
 
         return new Area(
-                name,
+                NameTool.createDefaultName(name, zoom, policy),
                 CoordinatesHelper.toTileCoordinateUpperNW(nw),
                 CoordinatesHelper.toTileCoordinateLowerSE(se),
                 zoom,
@@ -60,7 +59,7 @@ public class AreaFactory {
                 lon >= 0 ? (lon + 1) : lon
         );
 
-        final String name = MessageFormat.format("{0}{1,number,00}{2}{3,number,000}", (lat >= 0 ? "N" : "S"), Math.abs(lat), (lon < 0 ? "W" : "E"), Math.abs(lon));
+        final String name = NameTool.createNameFromCoordinates(point, zoom, policy);
 
         return build(
                 nw, se, zoom,
@@ -74,7 +73,7 @@ public class AreaFactory {
 
         return build(
                 nw, se, zoom,
-                icaoNW + "-" + icaoSE + "-" + zoom,
+                icaoNW + "-" + icaoSE,
                 policy
         );
     }

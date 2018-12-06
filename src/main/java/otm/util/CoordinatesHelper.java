@@ -1,5 +1,6 @@
 package otm.util;
 
+import java.text.MessageFormat;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -7,8 +8,8 @@ public class CoordinatesHelper {
     private static final Pattern pattern = Pattern.compile("([+-]?[0-9]{1,3})[° ]([0-9]{1,3})[\\. ']([0-9]{1,3})'?\\\"?");
 
     public static Coordinates toCoordinates(String text) throws Exception {
-        String [] split = text.split(" ");
-        if(split.length!=2){
+        String[] split = text.split(" ");
+        if (split.length != 2) {
             throw new Exception("unreadable coordinates: " + text);
         }
 
@@ -67,4 +68,13 @@ public class CoordinatesHelper {
         );
     }
 
+    public static String toText(Coordinates coords) {
+        return MessageFormat.format(
+                "{0}{1,number,00}{2}{3,number,000}",
+                (coords.getLat() >= 0 ? "N" : "S"),
+                Math.abs((int) coords.getLat()),
+                (coords.getLon() < 0 ? "W" : "E"),
+                Math.abs((int) coords.getLon())
+        );
+    }
 }

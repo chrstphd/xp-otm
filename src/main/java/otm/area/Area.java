@@ -3,6 +3,7 @@ package otm.area;
 import otm.tile.SubTilingPolicy;
 import otm.tile.Tile;
 import otm.util.Coordinates;
+import otm.util.NameTool;
 import otm.util.ProgressBar;
 
 import java.text.MessageFormat;

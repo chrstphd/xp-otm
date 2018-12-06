@@ -22,6 +22,7 @@ import java.nio.file.Paths;
 import java.text.MessageFormat;
 
 public class Shard {
+    public static final int SHARD_PIXEL_SIZE = 256;
     private static final int MAX_RETRIES = 5;
 
     private final Coordinates coordinates;
@@ -193,7 +194,7 @@ public class Shard {
             // if the file exists, read it
             try {
                 return ImageIO.read(tilePath.toFile());
-            }catch(Exception e){
+            } catch (Exception e) {
                 ErrorManager.getInstance().addError("shard", "unable to read image " + tilePath, e);
                 throw e;
             }

@@ -3,10 +3,7 @@ package otm.tile;
 import otm.OpenTopoMap;
 import otm.common.MapDescription;
 import otm.shard.Shard;
-import otm.util.Coordinates;
-import otm.util.CoordinatesHelper;
-import otm.util.ErrorManager;
-import otm.util.ProgressBar;
+import otm.util.*;
 
 import javax.imageio.ImageIO;
 import java.awt.Graphics2D;
@@ -36,12 +33,7 @@ public class Tile {
         this.zoom = zoom;
         this.subTilingPolicy = subTilingPolicy;
 
-        this.tileName = MessageFormat.format("{0}{1,number,00}{2}{3,number,000}_{4}_{5}",
-                (coords.getLat() >= 0 ? "N" : "S"), Math.abs((int) coords.getLat()),
-                (coords.getLon() < 0 ? "W" : "E"), Math.abs((int) coords.getLon()),
-                zoom,
-                subTilingPolicy.nbOfShards
-        );
+        this.tileName = NameTool.createNameFromCoordinates(coords, zoom, subTilingPolicy);
     }
 
     @Override
@@ -84,10 +76,10 @@ public class Tile {
         System.out.println("zoom: " + zoom);
         System.out.println("shard(s): " + height + "x" + width + " shard(s)");
         System.out.println("  -> " + (width * height) + " shards(s)");
-        System.out.println("  => " + (height * 256) + "x" + (width * 256) + " combined pixels");
+        System.out.println("  => " + (height * Shard.SHARD_PIXEL_SIZE) + "x" + (width * Shard.SHARD_PIXEL_SIZE) + " combined pixels");
         System.out.println("sub-tiling policy: " + subTilingPolicy.name());
         System.out.println("  -> " + verticalSubdivisions + "x" + horizontalSubdivisions + " sub-tiles");
-        System.out.println("  -> " + (subTilingPolicy.nbOfShards * 256) + "x" + (subTilingPolicy.nbOfShards * 256) + " pixels per sub-tile");
+        System.out.println("  -> " + (subTilingPolicy.nbOfShards * Shard.SHARD_PIXEL_SIZE) + "x" + (subTilingPolicy.nbOfShards * Shard.SHARD_PIXEL_SIZE) + " pixels per sub-tile");
         System.out.println("------------------");
 
         return (height * width);
@@ -133,8 +125,8 @@ public class Tile {
         final int height = Math.min(shards.length - vIndex, subTilingPolicy.nbOfShards);
         final int width = Math.min(shards[0].length - hIndex, subTilingPolicy.nbOfShards);
 
-        final int mergedWidthInPixels = width * 256;
-        final int mergedHeightInPixels = height * 256;
+        final int mergedWidthInPixels = width * Shard.SHARD_PIXEL_SIZE;
+        final int mergedHeightInPixels = height * Shard.SHARD_PIXEL_SIZE;
 
         BufferedImage merged = new BufferedImage(mergedWidthInPixels, mergedHeightInPixels, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = merged.createGraphics();
@@ -142,7 +134,7 @@ public class Tile {
             for (int v = 0; v < height; v++) {
                 for (int h = 0; h < width; h++) {
                     try {
-                        g.drawImage(shards[vIndex + v][hIndex + h].getBufferedImage(), h * 256, v * 256, null);
+                        g.drawImage(shards[vIndex + v][hIndex + h].getBufferedImage(), h * Shard.SHARD_PIXEL_SIZE, v * Shard.SHARD_PIXEL_SIZE, null);
                     } catch (IOException e) {
                         throw e;
                     }
