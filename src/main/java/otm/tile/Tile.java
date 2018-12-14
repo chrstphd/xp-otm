@@ -1,16 +1,14 @@
 package otm.tile;
 
-import otm.OpenTopoMap;
 import otm.common.MapDescription;
 import otm.shard.Shard;
 import otm.util.*;
 
 import javax.imageio.ImageIO;
-import java.awt.Graphics2D;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.text.MessageFormat;
 
 public class Tile {
@@ -85,7 +83,7 @@ public class Tile {
         return (height * width);
     }
 
-    public void generate(String areaName, ProgressBar progress) {
+    public void generate(String areaName, ProgressBar progress, Path areaFolderPath) {
         final int nbOfShards = shards.length * shards[0].length;
 
         // download the image of each shard
@@ -99,19 +97,13 @@ public class Tile {
             }
         }
 
-        // define the output folder in work/
-        Path tileWorkFolder = Paths.get(OpenTopoMap.OTM_WORK_DIR.toFile().getAbsolutePath(), areaName, tileName);
-
-        // create output folder
-        tileWorkFolder.toFile().mkdirs();
-
         // group shards as described by the policy
         try (ProgressBar.ProgressItem shardsProgress = progress.createProgressItem("[##] Merging shards", verticalSubdivisions * horizontalSubdivisions)) {
             for (int v = 0; v < verticalSubdivisions; v++) {
                 for (int h = 0; h < horizontalSubdivisions; h++) {
                     shardsProgress.increment();
                     String subTileName = MessageFormat.format("{0}-{1,number,000}-{2,number,000}", tileName, v, h);
-                    mergeShards(v * subTilingPolicy.nbOfShards, h * subTilingPolicy.nbOfShards, tileWorkFolder, subTileName);
+                    mergeShards(v * subTilingPolicy.nbOfShards, h * subTilingPolicy.nbOfShards, areaFolderPath, subTileName);
                 }
             }
         }

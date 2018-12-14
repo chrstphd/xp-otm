@@ -1,11 +1,12 @@
 package otm.area;
 
-import otm.tile.SubTilingPolicy;
+import otm.OpenTopoMap;
 import otm.tile.Tile;
 import otm.util.Coordinates;
-import otm.util.NameTool;
 import otm.util.ProgressBar;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.MessageFormat;
 
 /**
@@ -16,36 +17,34 @@ public class Area {
 
     private static final long MAX_SHARDS_TO_PROCESS = 50000L;
 
-    private final String areaName;
-
-    private final Coordinates northWest;
-    private final Coordinates southEast;
-    private final int zoom;
-    private final SubTilingPolicy subTilingPolicy;
+    private final AreaDescriptor descriptor;
+    private Path areaWorkFolderPath;
 
     private Tile[][] tiles;
     private long nbOfShardsToProcess;
 
-    protected Area(String areaName, Coordinates nw, Coordinates se, int zoom, SubTilingPolicy subTilingPolicy) {
-        this.areaName = areaName;
+    private boolean alreadyGenerated = false;
 
-        this.northWest = nw;
-        this.southEast = se;
-        this.zoom = zoom;
-        this.subTilingPolicy = subTilingPolicy;
+    public Area(AreaDescriptor descriptor) {
+        this.descriptor = descriptor;
+        this.areaWorkFolderPath = Paths.get(OpenTopoMap.OTM_WORK_DIR.toFile().getAbsolutePath(), descriptor.getAreaFolderName());
 
-        System.out.println(nw);
-        System.out.println(se);
-
-        prepare();
+        alreadyGenerated = areaWorkFolderPath.toFile().exists();
     }
 
-    /**
-     * Prepare the processing.
-     */
-    private void prepare() {
-        int nbOfVerticalTiles = Math.abs(Math.abs((int) northWest.getLat()) - Math.abs((int) southEast.getLat())) + 1;
-        int nbOfHorizontalTiles = Math.abs(Math.abs((int) northWest.getLon()) - Math.abs((int) southEast.getLon())) + 1;
+    public void generate() throws Exception {
+        if (alreadyGenerated) {
+            System.out.println("abort area generation of " + descriptor.getName() + ": already generated for zoom/policy: " + descriptor.getZoom() + "/" + descriptor.getPolicy());
+            return;
+        }
+
+        System.out.println("------------------");
+        System.out.println("preparing area " + descriptor.getName());
+
+//        int nbOfVerticalTiles = Math.abs(Math.abs((int) descriptor.getNW().getLat()) - Math.abs((int) descriptor.getSE().getLat())) + 1;
+//        int nbOfHorizontalTiles = Math.abs(Math.abs((int) descriptor.getNW().getLon()) - Math.abs((int) descriptor.getSE().getLon())) + 1;
+        int nbOfVerticalTiles = difference((int) descriptor.getNW().getLat(), (int) descriptor.getSE().getLat()) + 1;
+        int nbOfHorizontalTiles = difference((int) descriptor.getNW().getLon(), (int) descriptor.getSE().getLon()) + 1;
 
         System.out.println("area tiles: " + nbOfVerticalTiles + "x" + nbOfHorizontalTiles);
 
@@ -53,7 +52,7 @@ public class Area {
 
         for (int v = 0; v < nbOfVerticalTiles; v++) {
             for (int h = 0; h < nbOfHorizontalTiles; h++) {
-                tiles[v][h] = new Tile(new Coordinates((northWest.getLat()) - v, (northWest.getLon()) + h), zoom, subTilingPolicy);
+                tiles[v][h] = new Tile(new Coordinates((descriptor.getNW().getLat()) - v, (descriptor.getNW().getLon()) + h), descriptor.getZoom(), descriptor.getPolicy());
                 System.out.print(tiles[v][h] + " - ");
             }
             System.out.println();
@@ -67,15 +66,16 @@ public class Area {
         }
 
         System.out.println("nb of shards to process: " + nbOfShardsToProcess);
-    }
 
-    public void generate() throws Exception {
         // security to avoid Earth mapping's OCD
         if (nbOfShardsToProcess >= MAX_SHARDS_TO_PROCESS) {
             throw new Exception("nb of shards to process (" + nbOfShardsToProcess + ") exceeds the limit (" + MAX_SHARDS_TO_PROCESS + "): please, split the coordinates coverage");
         }
 
-        try (ProgressBar progress = new ProgressBar("Generating tiles")) {
+        // create output folder if needed
+        areaWorkFolderPath.toFile().mkdirs();
+
+        try (ProgressBar progress = new ProgressBar("Generating " + descriptor.getName())) {
             final int nbOfTiles = tiles.length * tiles[0].length;
             ProgressBar.ProgressItem tileProgression = progress.createProgressItem("Tiles", nbOfTiles);
             int currentTileIndex = 0;
@@ -83,9 +83,13 @@ public class Area {
                 for (int h = 0; h < tiles[0].length; h++) {
                     currentTileIndex++;
                     tileProgression.increment(MessageFormat.format("Tile #{0}/{1}: {2}", currentTileIndex, nbOfTiles, tiles[v][h].getTileName()));
-                    tiles[v][h].generate(areaName, progress);
+                    tiles[v][h].generate(descriptor.getName(), progress, areaWorkFolderPath);
                 }
             }
         }
+    }
+
+    private int difference(int smaller, int higher) {
+        return Math.abs((smaller + 1000) - (higher + 1000));
     }
 }

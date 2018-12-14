@@ -20,7 +20,7 @@ public class AreaFactory {
      * @return
      * @throws TileException
      */
-    public static Area build(Coordinates nw, Coordinates se, int zoom, String name, SubTilingPolicy policy) throws TileException {
+    public static Area build(String name, Coordinates nw, Coordinates se, int zoom, SubTilingPolicy policy) throws TileException {
         if (nw.getLat() < se.getLat()) {
             throw new TileException(name + "> NW latitude [" + nw.getLat() + "] must be higher than SW latitude [" + se.getLat() + "]");
         }
@@ -29,12 +29,14 @@ public class AreaFactory {
             throw new TileException(name + "> NW longitude [" + nw.getLon() + "] must be smaller than SW longitude [" + se.getLon() + "]");
         }
 
+
         return new Area(
-                NameTool.createDefaultName(name, zoom, policy),
-                CoordinatesHelper.toTileCoordinateUpperNW(nw),
-                CoordinatesHelper.toTileCoordinateLowerSE(se),
-                zoom,
-                policy
+                new AreaDescriptor(
+                        name,
+                        CoordinatesHelper.toTileCoordinateUpperNW(nw),
+                        CoordinatesHelper.toTileCoordinateLowerSE(se),
+                        zoom, policy
+                )
         );
     }
 
@@ -61,20 +63,13 @@ public class AreaFactory {
 
         final String name = NameTool.createNameFromCoordinates(point, zoom, policy);
 
-        return build(
-                nw, se, zoom,
-                name,
-                policy);
+        return build(name, nw, se, zoom, policy);
     }
 
-    public static Area build(String icaoNW, String icaoSE, int zoom, SubTilingPolicy policy) throws TileException, AirportNotFoundException {
+    public static Area build(String name, String icaoNW, String icaoSE, int zoom, SubTilingPolicy policy) throws TileException, AirportNotFoundException {
         Coordinates nw = Airports.getAirportCoordinates(icaoNW);
         Coordinates se = Airports.getAirportCoordinates(icaoSE);
 
-        return build(
-                nw, se, zoom,
-                icaoNW + "-" + icaoSE,
-                policy
-        );
+        return build(name, nw, se, zoom, policy);
     }
 }
