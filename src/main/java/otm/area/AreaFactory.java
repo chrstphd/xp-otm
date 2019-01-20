@@ -10,6 +10,8 @@ import otm.util.NameTool;
 
 public class AreaFactory {
 
+
+
     /**
      * Build the matrix based on the NW and SE corners, the zoom level and a name.
      *
@@ -51,15 +53,26 @@ public class AreaFactory {
         final int lat = (int) point.getLat();
         final int lon = (int) point.getLon();
 
-        final Coordinates nw = new Coordinates(
-                lat >= 0 ? (lat + 1) : lat,
-                lon >= 0 ? lon : (lon - 1)
-        );
+        System.out.println("lat: " + lat);
+        System.out.println("lon: " + lon);
 
-        final Coordinates se = new Coordinates(
-                lat >= 0 ? lat : (lat - 1),
-                lon >= 0 ? (lon + 1) : lon
-        );
+        // take care: lat/lon at 0 loose the sign !
+
+//        final Coordinates nw = new Coordinates(
+//                point.getLat() >= 0 ? (lat + 1) : lat,
+//                point.getLon() >= 0 ? lon : (lon - 1)
+//        );
+//
+//        final Coordinates se = new Coordinates(
+//                point.getLat() >= 0 ? lat : (lat - 1),
+//                point.getLon() >= 0 ? (lon + 1) : lon
+//        );
+
+        final Coordinates nw = CoordinatesHelper.toTileCoordinateUpperNW(point);
+        final Coordinates se = CoordinatesHelper.toTileCoordinateLowerSE(point);
+
+        System.out.println("nw: " + nw);
+        System.out.println("se: " + se) ;
 
         final String name = NameTool.createNameFromCoordinates(point, zoom, policy);
 

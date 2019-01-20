@@ -41,10 +41,8 @@ public class Area {
         System.out.println("------------------");
         System.out.println("preparing area " + descriptor.getName());
 
-//        int nbOfVerticalTiles = Math.abs(Math.abs((int) descriptor.getNW().getLat()) - Math.abs((int) descriptor.getSE().getLat())) + 1;
-//        int nbOfHorizontalTiles = Math.abs(Math.abs((int) descriptor.getNW().getLon()) - Math.abs((int) descriptor.getSE().getLon())) + 1;
-        int nbOfVerticalTiles = difference((int) descriptor.getNW().getLat(), (int) descriptor.getSE().getLat()) + 1;
-        int nbOfHorizontalTiles = difference((int) descriptor.getNW().getLon(), (int) descriptor.getSE().getLon()) + 1;
+        int nbOfVerticalTiles = difference(descriptor.getNW().getLat(), descriptor.getSE().getLat()) + 1;
+        int nbOfHorizontalTiles = difference(descriptor.getNW().getLon(), descriptor.getSE().getLon()) + 1;
 
         System.out.println("area tiles: " + nbOfVerticalTiles + "x" + nbOfHorizontalTiles);
 
@@ -89,7 +87,7 @@ public class Area {
         }
     }
 
-    private int difference(int smaller, int higher) {
-        return Math.abs((smaller + 1000) - (higher + 1000));
+    private int difference(double smaller, double higher) {
+        return (int) Math.abs((smaller + 1000) - (higher + 1000));
     }
 }

@@ -153,7 +153,7 @@ public class Shard {
                 } catch (IOException e) {
                     if (e instanceof FileNotFoundException) {
                         try {
-                            System.out.println("resource " + getName() + " not found on the server, probably plain water: flagging as such");
+                            //System.out.println("resource " + getName() + " not found on the server, probably plain water: flagging as such");
                             // we already know the image will be not found on the server, so we create a "water" flag instead if we have to re-process the same image
                             Files.createFile(Paths.get(tilePath.toFile().getAbsolutePath() + ".water"));
                             break;

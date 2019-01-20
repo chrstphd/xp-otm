@@ -34,7 +34,7 @@ class CoordinatesHelperTest {
         try {
             Coordinates result = CoordinatesHelper.toCoordinates(coords);
             Assertions.assertTrue(isAround(38.481388d, result.getLat()), "computing " + coords);
-            Assertions.assertTrue(isAround(11.538888d, result.getLon()), "computing " + coords);
+            Assertions.assertTrue(isAround(11.538888d, result.getLon ()), "computing " + coords);
         } catch (Exception e) {
             e.printStackTrace();
             assert false;
@@ -50,22 +50,22 @@ class CoordinatesHelperTest {
         // Q1
         Coordinates q1 = CoordinatesHelper.toTileCoordinateUpperNW(new Coordinates(59.234, 5.123));
         Assertions.assertEquals(59.99999, q1.getLat(), "Q1 latitude");
-        Assertions.assertEquals(5.0, q1.getLon(), "Q1 longitude");
+        Assertions.assertEquals(5.00001, q1.getLon(), "Q1 longitude");
 
         // Q2
         Coordinates q2 = CoordinatesHelper.toTileCoordinateUpperNW(new Coordinates(59.234, -5.123));
         Assertions.assertEquals(59.99999, q2.getLat(), "Q2 latitude");
-        Assertions.assertEquals(-6.0, q2.getLon(), "Q2 longitude");
+        Assertions.assertEquals(-5.99999, q2.getLon(), "Q2 longitude");
 
         // Q3
         Coordinates q3 = CoordinatesHelper.toTileCoordinateUpperNW(new Coordinates(-59.234, -5.123));
-        Assertions.assertEquals(-59.0, q3.getLat(), "Q3 latitude");
-        Assertions.assertEquals(-6.0, q3.getLon(), "Q3 longitude");
+        Assertions.assertEquals(-59.00001, q3.getLat(), "Q3 latitude");
+        Assertions.assertEquals(-5.99999, q3.getLon(), "Q3 longitude");
 
         // Q4
         Coordinates q4 = CoordinatesHelper.toTileCoordinateUpperNW(new Coordinates(-59.234, 5.123));
-        Assertions.assertEquals(-59.0, q4.getLat(), "Q4 latitude");
-        Assertions.assertEquals(5.0, q4.getLon(), "Q4 longitude");
+        Assertions.assertEquals(-59.00001, q4.getLat(), "Q4 latitude");
+        Assertions.assertEquals(5.00001, q4.getLon(), "Q4 longitude");
     }
 
     @Test
@@ -76,22 +76,22 @@ class CoordinatesHelperTest {
 
         // Q1
         Coordinates q1 = CoordinatesHelper.toTileCoordinateLowerSE(new Coordinates(59.234, 5.123));
-        Assertions.assertEquals(59.0, q1.getLat(), "Q1 latitude");
+        Assertions.assertEquals(59.00001, q1.getLat(), "Q1 latitude");
         Assertions.assertEquals(5.99999, q1.getLon(), "Q1 longitude");
 
         // Q2
         Coordinates q2 = CoordinatesHelper.toTileCoordinateLowerSE(new Coordinates(59.234, -5.123));
-        Assertions.assertEquals(59.0, q2.getLat(), "Q2 latitude");
-        Assertions.assertEquals(-5.0, q2.getLon(), "Q2 longitude");
+        Assertions.assertEquals(59.00001, q2.getLat(), "Q2 latitude");
+        Assertions.assertEquals(-5.00001, q2.getLon(), "Q2 longitude");
 
         // Q3
         Coordinates q3 = CoordinatesHelper.toTileCoordinateLowerSE(new Coordinates(-59.234, -5.123));
-        Assertions.assertEquals(-60.0, q3.getLat(), "Q3 latitude");
-        Assertions.assertEquals(-5.0, q3.getLon(), "Q3 longitude");
+        Assertions.assertEquals(-59.99999, q3.getLat(), "Q3 latitude");
+        Assertions.assertEquals(-5.00001, q3.getLon(), "Q3 longitude");
 
         // Q4
         Coordinates q4 = CoordinatesHelper.toTileCoordinateLowerSE(new Coordinates(-59.234, 5.123));
-        Assertions.assertEquals(-60.0, q4.getLat(), "Q4 latitude");
+        Assertions.assertEquals(-59.99999, q4.getLat(), "Q4 latitude");
         Assertions.assertEquals(5.99999, q4.getLon(), "Q4 longitude");
     }
 

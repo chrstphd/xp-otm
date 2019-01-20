@@ -6,6 +6,8 @@ import java.util.regex.Pattern;
 
 public class CoordinatesHelper {
     private static final Pattern pattern = Pattern.compile("([+-]?[0-9]{1,3})[° ]([0-9]{1,3})[\\. ']([0-9]{1,3})'?\\\"?");
+    private static final double NEARLY_ZERO = .00001d;
+    private static final double NEARLY_MAX = .99999d;
 
     public static Coordinates toCoordinates(String text) throws Exception {
         String[] split = text.split(" ");
@@ -51,20 +53,18 @@ public class CoordinatesHelper {
     public static Coordinates toTileCoordinateUpperNW(Coordinates coordinates) {
         final int lat = (int) coordinates.getLat();
         final int lon = (int) coordinates.getLon();
-
         return new Coordinates(
-                lat >= 0 ? (lat + 0.99999) : lat,
-                lon >= 0 ? lon : (lon - 1)
+                coordinates.getLat() >= 0 ? (lat + NEARLY_MAX) : (lat - NEARLY_ZERO),
+                coordinates.getLon() >= 0 ? (lon + NEARLY_ZERO) : (lon - 1 + NEARLY_ZERO)
         );
     }
 
     public static Coordinates toTileCoordinateLowerSE(Coordinates coordinates) {
         final int lat = (int) coordinates.getLat();
         final int lon = (int) coordinates.getLon();
-
         return new Coordinates(
-                lat >= 0 ? lat : (lat - 1),
-                lon >= 0 ? (lon + 0.99999) : lon
+                coordinates.getLat() >= 0 ? (lat + NEARLY_ZERO) : (lat - 1 + NEARLY_ZERO),
+                coordinates.getLon() >= 0 ? (lon + NEARLY_MAX) : (lon - NEARLY_ZERO)
         );
     }
 

@@ -20,6 +20,7 @@ public class Airports {
         String coords = airports.getProperty(apt);
 
         if (coords != null) {
+            System.out.println("airport ["+apt+"] coordinates: " + coords);
             String[] split = coords.split(" ");
             return new Coordinates(
                     Double.parseDouble(split[0]),
