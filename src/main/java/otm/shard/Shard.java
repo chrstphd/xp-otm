@@ -1,12 +1,16 @@
 package otm.shard;
 
+import otm.Context;
 import otm.OpenTopoMap;
+import otm.area.route.Route;
 import otm.tile.TileException;
 import otm.util.Coordinates;
 import otm.util.ErrorManager;
-import otm.util.WaterImage;
+import otm.util.ProgressBar;
+import otm.util.image.ColorImages;
 
 import javax.imageio.ImageIO;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -20,6 +24,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.MessageFormat;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Shard {
     public static final int SHARD_PIXEL_SIZE = 256;
@@ -38,6 +44,9 @@ public class Shard {
 
     private final Path tilePath;
 
+    private static final Map<String, Double> latCache = new HashMap<>();
+    private static final Map<String, Double> lonCache = new HashMap<>();
+
     public Shard(Coordinates coordinates, int zoom) {
         this.coordinates = coordinates;
         this.zoom = zoom;
@@ -49,7 +58,7 @@ public class Shard {
         this.west = tile2lon(xtile, zoom);
         this.east = tile2lon(xtile + 1, zoom);
 
-        this.tilePath = OpenTopoMap.OTM_CACHE_DIR.resolve(getName() + ".png");
+        this.tilePath = Context.getInstance().getCachePath().resolve(getName() + ".png");
     }
 
     /**
@@ -60,11 +69,9 @@ public class Shard {
         int ytile = (int) Math.floor((1 - Math.log(Math.tan(Math.toRadians(coordinates.getLat())) + 1 / Math.cos(Math.toRadians(coordinates.getLat()))) / Math.PI) / 2 * (1 << zoom));
 
         if (xtile < 0) xtile = 0;
-
         if (xtile >= (1 << zoom)) xtile = ((1 << zoom) - 1);
 
         if (ytile < 0) ytile = 0;
-
         if (ytile >= (1 << zoom)) ytile = ((1 << zoom) - 1);
 
         this.xtile = xtile;
@@ -72,12 +79,19 @@ public class Shard {
     }
 
     private double tile2lon(int x, int z) {
-        return x / Math.pow(2.0, z) * 360.0 - 180;
+        return lonCache.computeIfAbsent(x + "/" + z, v -> x / Math.pow(2.0, z) * 360.0 - 180);
     }
 
     private double tile2lat(int y, int z) {
-        double n = Math.PI - (2.0 * Math.PI * y) / Math.pow(2.0, z);
-        return Math.toDegrees(Math.atan(Math.sinh(n)));
+        return latCache.computeIfAbsent(y + "/" + z, v ->
+                Math.toDegrees(
+                        Math.atan(
+                                Math.sinh(
+                                        Math.PI - (2.0 * Math.PI * y) / Math.pow(2.0, z)
+                                )
+                        )
+                )
+        );
     }
 
     public String getName() {
@@ -110,15 +124,15 @@ public class Shard {
         return new Shard(new Coordinates(nextLat, coordinates.getLon()), zoom);
     }
 
-    public void generate() {
+    public void generate(ProgressBar.ProgressItem shardProgress) {
         try {
-            downloadImage();
+            downloadImage(shardProgress);
         } catch (TileException e) {
             ErrorManager.getInstance().addError("shard", "error raised when generating " + getName(), e);
         }
     }
 
-    private void downloadImage() throws TileException {
+    private void downloadImage(ProgressBar.ProgressItem shardProgress) throws TileException {
         if (!checkIfPreviouslyDownloaded()) {
             // create the folders "zoom/x/"
             tilePath.getParent().toFile().mkdirs();
@@ -133,13 +147,15 @@ public class Shard {
                 }
 
                 if (retry > 0) {
-                    System.out.println("retrying #" + retry + "/" + MAX_RETRIES + ": " + url);
+                    shardProgress.setTemporaryMessage("retrying #" + retry + "/" + MAX_RETRIES + ": " + url);
 
                     try {
-                        Thread.sleep(1000);
+                        Thread.sleep(300);
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        shardProgress.setTemporaryMessage(e.getMessage());
                     }
+                } else {
+                    shardProgress.setTemporaryMessage("retrieving: " + url);
                 }
 
                 try (
@@ -158,7 +174,7 @@ public class Shard {
                             Files.createFile(Paths.get(tilePath.toFile().getAbsolutePath() + ".water"));
                             break;
                         } catch (IOException e1) {
-                            System.out.println(MessageFormat.format("Shard {0}: {1}", tilePath, e.toString()));
+                            shardProgress.setTemporaryMessage(e.toString());
                         }
                     } else {
                         if (!e.getMessage().contains("503 for URL")) {
@@ -172,7 +188,7 @@ public class Shard {
             try {
                 Thread.sleep(200);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                shardProgress.setTemporaryMessage(e.getMessage());
             }
         }
     }
@@ -189,6 +205,10 @@ public class Shard {
         return alreadyDownloaded;
     }
 
+    public boolean isWater() {
+        return new File(tilePath.toFile().getAbsolutePath() + ".water").exists();
+    }
+
     public BufferedImage getBufferedImage() throws IOException {
         if (tilePath.toFile().exists()) {
             // if the file exists, read it
@@ -198,9 +218,8 @@ public class Shard {
                 ErrorManager.getInstance().addError("shard", "unable to read image " + tilePath, e);
                 throw e;
             }
-        } else if (new File(tilePath.toFile().getAbsolutePath() + ".water").exists()) {
-            // otherwise, it's certainly a water tile -> water image
-            return WaterImage.getBufferedImage();
+        } else if (isWater()) {
+            return ColorImages.getInstance().getDefaultWaterImage();
         } else {
             // real error...
             throw new IOException("the file " + tilePath + " is really missing !?!");
@@ -234,5 +253,11 @@ public class Shard {
     @Override
     public String toString() {
         return "Shard{" + getName() + "}";
+    }
+
+    public void drawLine(Color color, Route route) {
+        for (int i = 1; i < route.getWaypoints().size(); i++) {
+
+        }
     }
 }

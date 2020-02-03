@@ -6,8 +6,9 @@ import java.util.regex.Pattern;
 
 public class CoordinatesHelper {
     private static final Pattern pattern = Pattern.compile("([+-]?[0-9]{1,3})[° ]([0-9]{1,3})[\\. ']([0-9]{1,3})'?\\\"?");
-    private static final double NEARLY_ZERO = .00001d;
-    private static final double NEARLY_MAX = .99999d;
+
+    private static final double NEARLY_ZERO = 0d;//.000001d;
+    private static final double NEARLY_MAX = 1d;//.999999d;
 
     public static Coordinates toCoordinates(String text) throws Exception {
         String[] split = text.split(" ");
@@ -53,19 +54,30 @@ public class CoordinatesHelper {
     public static Coordinates toTileCoordinateUpperNW(Coordinates coordinates) {
         final int lat = (int) coordinates.getLat();
         final int lon = (int) coordinates.getLon();
+
         return new Coordinates(
-                coordinates.getLat() >= 0 ? (lat + NEARLY_MAX) : (lat - NEARLY_ZERO),
-                coordinates.getLon() >= 0 ? (lon + NEARLY_ZERO) : (lon - 1 + NEARLY_ZERO)
+                lat >= 0 ? (lat + 1) : lat,
+                lon
         );
+
+//        return new Coordinates(
+//                coordinates.getLat() >= 0 ? (lat + NEARLY_MAX) : (lat - NEARLY_ZERO),
+//                coordinates.getLon() >= 0 ? (lon + NEARLY_ZERO) : (lon - 1 + NEARLY_ZERO)
+//        );
     }
 
     public static Coordinates toTileCoordinateLowerSE(Coordinates coordinates) {
         final int lat = (int) coordinates.getLat();
         final int lon = (int) coordinates.getLon();
+
         return new Coordinates(
-                coordinates.getLat() >= 0 ? (lat + NEARLY_ZERO) : (lat - 1 + NEARLY_ZERO),
-                coordinates.getLon() >= 0 ? (lon + NEARLY_MAX) : (lon - NEARLY_ZERO)
+                lat >= 0 ? lat : (lat - 1),
+                lon >= 0 ? (lon + 1) : lon
         );
+//        return new Coordinates(
+//                coordinates.getLat() >= 0 ? (lat + NEARLY_ZERO) : (lat - 1 + NEARLY_ZERO),
+//                coordinates.getLon() >= 0 ? (lon + NEARLY_MAX) : (lon - NEARLY_ZERO)
+//        );
     }
 
     public static String toText(Coordinates coords) {

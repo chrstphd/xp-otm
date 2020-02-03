@@ -49,9 +49,6 @@ public class AreaFactory {
      * @return
      */
     public static Area buildSingle(Coordinates point, int zoom, SubTilingPolicy policy) throws TileException {
-        final int lat = (int) point.getLat();
-        final int lon = (int) point.getLon();
-
         final Coordinates nw = CoordinatesHelper.toTileCoordinateUpperNW(point);
         final Coordinates se = CoordinatesHelper.toTileCoordinateLowerSE(point);
 

@@ -28,13 +28,13 @@ class CoordinatesHelperTest {
     }
 
     @Test
-    void fromCompleteStringToDecimal(){
+    void fromCompleteStringToDecimal() {
         final String coords = "N38°28.53' E11°32.20";
 
         try {
             Coordinates result = CoordinatesHelper.toCoordinates(coords);
             Assertions.assertTrue(isAround(38.481388d, result.getLat()), "computing " + coords);
-            Assertions.assertTrue(isAround(11.538888d, result.getLon ()), "computing " + coords);
+            Assertions.assertTrue(isAround(11.538888d, result.getLon()), "computing " + coords);
         } catch (Exception e) {
             e.printStackTrace();
             assert false;

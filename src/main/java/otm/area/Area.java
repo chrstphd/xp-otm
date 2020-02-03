@@ -1,9 +1,14 @@
 package otm.area;
 
+import otm.Context;
 import otm.OpenTopoMap;
 import otm.tile.SubTilingPolicy;
 
+import java.awt.Color;
+import java.io.File;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 
 public abstract class Area {
     public static final long MAX_SHARDS_TO_PROCESS = 50000L;
@@ -13,6 +18,8 @@ public abstract class Area {
 
     private String name;
     private Path areaWorkFolderPath;
+
+    private Map<String, Color> colouredLayers = new HashMap<>();
 
     public Area() { /* empty */ }
 
@@ -40,7 +47,12 @@ public abstract class Area {
 
     public Area setName(String name) {
         this.name = name;
-        this.areaWorkFolderPath = OpenTopoMap.OTM_WORK_DIR.resolve(name);
+        this.areaWorkFolderPath = Context.getInstance().getWorkPath().resolve(name);
+        return this;
+    }
+
+    public Area withColouredLayer(String name, Color color) {
+        colouredLayers.put(name, color);
         return this;
     }
 
@@ -50,11 +62,6 @@ public abstract class Area {
      * @throws Exception
      */
     public void generate() throws Exception {
-        if (areaWorkFolderPath.toFile().exists()) {
-            System.out.println("aborting generation since the output folder already exists: " + areaWorkFolderPath);
-            return;
-        }
-
         generate(areaWorkFolderPath);
     }
 
@@ -69,8 +76,22 @@ public abstract class Area {
             outputFolderPath.toFile().mkdirs();
         }
 
-        doGenerate(outputFolderPath);
+        outputFolderPath.resolve("10-maps").toFile().mkdirs();
+        doGenerate(outputFolderPath.resolve("10-maps"));
+
+        colouredLayers.entrySet().stream()
+                .forEach(entry -> {
+                    File outputFolderFile = outputFolderPath.resolve("20-layer-" + entry.getKey()).toFile();
+                    outputFolderFile.mkdirs();
+                    doColourLayer(entry.getKey(), entry.getValue(), outputFolderFile.toPath());
+                });
+
     }
 
     protected abstract void doGenerate(Path outputFolderPath) throws Exception;
+
+    public abstract void describe();
+
+    //FIXME should not throw a RuntimeException to please to the caller's lambda
+    protected abstract void doColourLayer(String name, Color color, Path outputFolderPath) throws RuntimeException;
 }

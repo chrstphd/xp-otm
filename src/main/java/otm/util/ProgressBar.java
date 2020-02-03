@@ -42,6 +42,7 @@ public class ProgressBar implements AutoCloseable {
         private final double STRING_SIZE = 25;
         private double currentValue = 0;
         private String currentDescription;
+        private String temporaryMessage;
 
         public ProgressItem(ProgressBar progressBar, String label, double maxValue) {
             this.progressbar = progressBar;
@@ -56,6 +57,12 @@ public class ProgressBar implements AutoCloseable {
 
         public void increment() {
             this.currentValue++;
+            temporaryMessage = null;
+            progressbar.show();
+        }
+
+        public void setTemporaryMessage(String temporaryMessage) {
+            this.temporaryMessage = temporaryMessage;
             progressbar.show();
         }
 
@@ -72,8 +79,11 @@ public class ProgressBar implements AutoCloseable {
             }
             builder.append("]");
 
-            if(currentDescription!=null){
+            if (currentDescription != null) {
                 builder.append(" ").append(currentDescription);
+                if (temporaryMessage != null) {
+                    builder.append(" (").append(temporaryMessage).append(")");
+                }
             }
 
             return builder.toString();
